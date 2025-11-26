@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Veterinaria{% endblock %}
+
+{% block content %}
+<div x-data="dashboardApp()" x-cloak>
+    <div class="mb-6 flex justify-between items-center">
+        <h2 class="text-2xl font-bold text-gray-900">
+            <i class="fas fa-chart-line mr-2 text-blue-600"></i>Dashboard Administrativo
+        </h2>
+        <a href="{{ url_for('admin.listar_ventas') }}" 
+           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <i class="fas fa-list mr-2"></i>Ver Historial de Ventas
+        </a>
+    </div>
+
+    <!-- Filtros de fecha y empleado -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
+                <input type="date" 
+                       x-model="fechaInicio"
+                       @change="cargarEstadisticas()"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
+                <input type="date" 
+                       x-model="fechaFin"
+                       @change="cargarEstadisticas()"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Empleado</label>
+                <select x-model="usuarioId"
+                        @change="cargarEstadisticas()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Todos los empleados</option>
+                    <template x-for="usuario in estadisticas.usuarios || []" :key="usuario.id">
+                        <option :value="usuario.id" x-text="usuario.username"></option>
+                    </template>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button @click="limpiarFiltros()" 
+                        class="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                    <i class="fas fa-redo mr-2"></i>Limpiar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium">Total Ventas</p>
+                    <p class="text-3xl font-bold mt-2" x-text="estadisticas.total_ventas || 0"></p>
+                </div>
+                <i class="fas fa-shopping-cart text-4xl opacity-50"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium">Total Ingresos</p>
+                    <p class="text-3xl font-bold mt-2" x-text="formatMoney(estadisticas.total_ingresos || 0)"></p>
+                </div>
+                <i class="fas fa-dollar-sign text-4xl opacity-50"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium">Total Ganancias</p>
+                    <p class="text-3xl font-bold mt-2" x-text="formatMoney(estadisticas.total_ganancias || 0)"></p>
+                </div>
+                <i class="fas fa-chart-line text-4xl opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Métodos de pago -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-credit-card mr-2 text-blue-600"></i>Ventas por Método de Pago
+            </h3>
+            <div class="space-y-3">
+                <template x-for="(monto, metodo) in estadisticas.pagos_por_metodo || {}" :key="metodo">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i :class="getMetodoIcon(metodo)" class="mr-3 text-lg"></i>
+                            <span class="font-medium capitalize" x-text="metodo"></span>
+                        </div>
+                        <span class="font-bold text-blue-600" x-text="formatMoney(monto)"></span>
+                    </div>
+                </template>
+                <template x-if="!estadisticas.pagos_por_metodo || Object.keys(estadisticas.pagos_por_metodo).length === 0">
+                    <p class="text-gray-500 text-center py-4">No hay datos disponibles</p>
+                </template>
+            </div>
+        </div>
+
+        <!-- Productos más vendidos -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-star mr-2 text-blue-600"></i>Productos Más Vendidos
+            </h3>
+            <div class="space-y-3">
+                <template x-for="(producto, index) in estadisticas.productos_mas_vendidos || []" :key="index">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mr-3"
+                                  x-text="index + 1"></span>
+                            <span class="font-medium" x-text="producto.nombre"></span>
+                        </div>
+                        <span class="font-bold text-blue-600" x-text="producto.cantidad + ' unidades'"></span>
+                    </div>
+                </template>
+                <template x-if="!estadisticas.productos_mas_vendidos || estadisticas.productos_mas_vendidos.length === 0">
+                    <p class="text-gray-500 text-center py-4">No hay datos disponibles</p>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de ventas últimos 7 días -->
+    <div class="bg-white shadow-lg rounded-xl p-6 mb-6 border border-gray-100">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-900">
+                <i class="fas fa-chart-line mr-2 text-blue-600"></i>Ventas Últimos 7 Días
+            </h3>
+            <div class="text-sm text-gray-500">
+                <span class="font-semibold text-blue-600" x-text="formatMoney(getTotalUltimos7Dias())"></span>
+                <span class="ml-1">total</span>
+            </div>
+        </div>
+        
+        <!-- Gráfico interactivo -->
+        <div class="relative">
+            <!-- Líneas de referencia -->
+            <div class="absolute inset-0 flex flex-col justify-between pb-16 pointer-events-none">
+                <template x-for="i in 4" :key="i">
+                    <div class="border-t border-gray-100"></div>
+                </template>
+            </div>
+            
+            <!-- Contenedor del gráfico -->
+            <div class="h-80 flex items-end justify-between gap-2 relative">
+                <template x-for="(dia, index) in estadisticas.ventas_ultimos_7_dias || []" :key="index">
+                    <div class="flex-1 flex flex-col items-center group relative h-full">
+                        <!-- Tooltip -->
+                        <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                            <div class="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-xl whitespace-nowrap">
+                                <div class="font-semibold mb-1" x-text="formatFechaCompleta(dia.fecha)"></div>
+                                <div class="text-blue-300 font-bold" x-text="formatMoney(dia.total)"></div>
+                            </div>
+                            <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 -mb-1">
+                                <div class="w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Barra del gráfico -->
+                        <div class="w-full flex flex-col items-center justify-end h-full relative">
+                            <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg transition-all duration-500 ease-out shadow-md group-hover:shadow-xl group-hover:from-blue-600 group-hover:to-blue-500 relative overflow-hidden"
+                                 :style="'height: ' + (getMaxVenta() > 0 ? (dia.total / getMaxVenta() * 100) : 0) + '%'"
+                                 :class="{'min-h-[4px]': dia.total > 0}">
+                                <!-- Efecto de brillo al hover -->
+                                <div class="absolute inset-0 bg-gradient-to-t from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                
+                                <!-- Valor sobre la barra -->
+                                <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <span class="text-xs font-bold text-blue-700 whitespace-nowrap" x-text="formatMoney(dia.total)"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Fecha -->
+                        <div class="mt-3 text-center">
+                            <div class="text-xs font-semibold text-gray-700" x-text="formatFecha(dia.fecha)"></div>
+                            <div class="text-xs text-gray-400 mt-1" x-text="formatDiaSemana(dia.fecha)"></div>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Mensaje si no hay datos -->
+                <template x-if="!estadisticas.ventas_ultimos_7_dias || estadisticas.ventas_ultimos_7_dias.length === 0">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <p class="text-gray-400 text-center">
+                            <i class="fas fa-chart-line text-4xl mb-2 block"></i>
+                            <span>No hay datos disponibles</span>
+                        </p>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Leyenda y estadísticas adicionales -->
+            <div class="mt-6 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-sm text-gray-500">Promedio Diario</div>
+                    <div class="text-lg font-bold text-blue-600" x-text="formatMoney(getPromedioDiario())"></div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-500">Día con Mayor Venta</div>
+                    <div class="text-lg font-bold text-green-600" x-text="getDiaMayorVenta()"></div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-500">Día con Menor Venta</div>
+                    <div class="text-lg font-bold text-orange-600" x-text="getDiaMenorVenta()"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas por Empleado -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-users mr-2 text-blue-600"></i>Estadísticas por Empleado
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empleado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ventas</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ingresos</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ganancias</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="empleado in estadisticas.estadisticas_empleados || []" :key="empleado.usuario_id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <i class="fas fa-user text-blue-600"></i>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900" x-text="empleado.username"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900" x-text="empleado.total_ventas"></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-semibold text-green-600" x-text="formatMoney(empleado.total_ingresos)"></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-semibold text-blue-600" x-text="formatMoney(empleado.total_ganancias)"></div>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="!estadisticas.estadisticas_empleados || estadisticas.estadisticas_empleados.length === 0">
+                        <tr>
+                            <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                                No hay estadísticas de empleados disponibles
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Productos con stock bajo -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-exclamation-triangle mr-2 text-red-600"></i>Productos con Stock Bajo
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock Actual</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock Mínimo</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="producto in estadisticas.productos_stock_bajo || []" :key="producto.id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm font-medium text-gray-900" x-text="producto.nombre"></td>
+                            <td class="px-4 py-3 text-sm text-gray-900" x-text="producto.stock"></td>
+                            <td class="px-4 py-3 text-sm text-gray-900" x-text="producto.stock_minimo"></td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                    Stock Bajo
+                                </span>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="!estadisticas.productos_stock_bajo || estadisticas.productos_stock_bajo.length === 0">
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                No hay productos con stock bajo
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function dashboardApp() {
+    return {
+        estadisticas: {},
+        fechaInicio: '',
+        fechaFin: '',
+        usuarioId: '',
+
+        async cargarEstadisticas() {
+            try {
+                let url = '/admin/api/estadisticas';
+                const params = new URLSearchParams();
+                if (this.fechaInicio) params.append('fecha_inicio', this.fechaInicio);
+                if (this.fechaFin) params.append('fecha_fin', this.fechaFin);
+                if (this.usuarioId) params.append('usuario_id', this.usuarioId);
+                if (params.toString()) url += '?' + params.toString();
+
+                const response = await fetch(url);
+                this.estadisticas = await response.json();
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+            }
+        },
+
+        limpiarFiltros() {
+            this.fechaInicio = '';
+            this.fechaFin = '';
+            this.usuarioId = '';
+            this.cargarEstadisticas();
+        },
+
+        formatMoney(value) {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 0
+            }).format(value);
+        },
+
+        formatFecha(fecha) {
+            const date = new Date(fecha);
+            return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        },
+
+        formatFechaCompleta(fecha) {
+            const date = new Date(fecha);
+            return date.toLocaleDateString('es-ES', { 
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        },
+
+        formatDiaSemana(fecha) {
+            const date = new Date(fecha);
+            const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            return dias[date.getDay()];
+        },
+
+        getMetodoIcon(metodo) {
+            const icons = {
+                'efectivo': 'fas fa-money-bill-wave text-green-600',
+                'nequi': 'fas fa-mobile-alt text-purple-600',
+                'daviplata': 'fas fa-wallet text-blue-600'
+            };
+            return icons[metodo] || 'fas fa-credit-card';
+        },
+
+        getMaxVenta() {
+            if (!this.estadisticas.ventas_ultimos_7_dias) return 1;
+            const max = Math.max(...this.estadisticas.ventas_ultimos_7_dias.map(d => d.total));
+            return max || 1;
+        },
+
+        getTotalUltimos7Dias() {
+            if (!this.estadisticas.ventas_ultimos_7_dias) return 0;
+            return this.estadisticas.ventas_ultimos_7_dias.reduce((sum, dia) => sum + dia.total, 0);
+        },
+
+        getPromedioDiario() {
+            if (!this.estadisticas.ventas_ultimos_7_dias || this.estadisticas.ventas_ultimos_7_dias.length === 0) return 0;
+            const total = this.getTotalUltimos7Dias();
+            return total / this.estadisticas.ventas_ultimos_7_dias.length;
+        },
+
+        getDiaMayorVenta() {
+            if (!this.estadisticas.ventas_ultimos_7_dias || this.estadisticas.ventas_ultimos_7_dias.length === 0) return 'N/A';
+            const maxDia = this.estadisticas.ventas_ultimos_7_dias.reduce((max, dia) => 
+                dia.total > max.total ? dia : max
+            );
+            return this.formatFecha(maxDia.fecha);
+        },
+
+        getDiaMenorVenta() {
+            if (!this.estadisticas.ventas_ultimos_7_dias || this.estadisticas.ventas_ultimos_7_dias.length === 0) return 'N/A';
+            const minDia = this.estadisticas.ventas_ultimos_7_dias.reduce((min, dia) => 
+                dia.total < min.total ? dia : min
+            );
+            return this.formatFecha(minDia.fecha);
+        }
+    }
+}
+
+// Cargar estadísticas al iniciar
+document.addEventListener('alpine:init', () => {
+    setTimeout(() => {
+        const app = Alpine.$data(document.querySelector('[x-data="dashboardApp()"]'));
+        if (app) app.cargarEstadisticas();
+    }, 100);
+});
+</script>
+{% endblock %}
+

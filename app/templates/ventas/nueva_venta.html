@@ -1,0 +1,1168 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Venta - Veterinaria{% endblock %}
+
+{% block content %}
+<div x-data="ventaApp()" x-init="init()" x-cloak>
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-shopping-cart mr-2 text-blue-600"></i>Nueva Venta
+                </h2>
+                <div class="flex items-center space-x-2">
+                    <button @click="mostrarCarritos = true" 
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-ticket-alt mr-2"></i>
+                        <span x-text="'Carritos (' + (carritosGuardados.length + 1) + ')'"></span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Indicador de carrito activo -->
+            <div x-show="carritoActual.nombre" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="text-sm font-medium text-blue-900">
+                            <i class="fas fa-tag mr-2"></i>Carrito activo: <span x-text="carritoActual.nombre" class="font-semibold"></span>
+                        </span>
+                        <span x-show="carritoActual.cliente" class="text-xs text-blue-700 ml-3">
+                            Cliente: <span x-text="carritoActual.cliente"></span>
+                        </span>
+                    </div>
+                    <button @click="editarCarritoActual()" 
+                            class="text-sm text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-edit mr-1"></i>Editar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Campo de código de barras y búsqueda -->
+            <div class="mb-6">
+                <label for="codigo_barras" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-barcode mr-2"></i>Escanea el código de barras
+                </label>
+                <div class="flex space-x-2">
+                    <input 
+                        type="text" 
+                        id="codigo_barras"
+                        x-model="codigoBarras"
+                        @keyup.enter="buscarProducto()"
+                        @input="handleBarcodeInput($event)"
+                        placeholder="Escanea o ingresa el código de barras"
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                        autofocus
+                    >
+                    <button @click="mostrarBusquedaNombre = true" 
+                            class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                        <i class="fas fa-search mr-2"></i>Buscar por Nombre
+                    </button>
+                    <button @click="mostrarBusquedaConsulta = true" 
+                            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-stethoscope mr-2"></i>Traer de Consulta
+                    </button>
+                </div>
+                <p class="mt-2 text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>Usa la pistola de código de barras, escribe el código manualmente, busca por nombre o trae medicamentos de una consulta
+                </p>
+            </div>
+
+            <!-- Lista de productos en la venta -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Productos en la venta</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unit.</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-if="items.length === 0">
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                        <i class="fas fa-shopping-basket text-4xl mb-2 block"></i>
+                                        No hay productos en la venta
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="(item, index) in items" :key="index">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900" x-text="item.nombre"></div>
+                                        <div class="text-sm text-gray-500" x-text="'Código: ' + item.codigo_barras"></div>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <button @click="decrementarCantidad(index)" 
+                                                    class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-l">
+                                                <i class="fas fa-minus text-xs"></i>
+                                            </button>
+                                            <input type="number" 
+                                                   x-model="item.cantidad"
+                                                   @change="actualizarSubtotal(index)"
+                                                   min="1"
+                                                   :max="item.stock"
+                                                   class="w-16 px-2 py-1 text-center border-t border-b border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            <button @click="incrementarCantidad(index)" 
+                                                    class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-r">
+                                                <i class="fas fa-plus text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900" x-text="formatMoney(item.precio_unitario)"></td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900" x-text="formatMoney(item.subtotal)"></td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <button @click="eliminarItem(index)" 
+                                                class="text-red-600 hover:text-red-800">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Resumen y pago -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Resumen -->
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Resumen</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Subtotal:</span>
+                            <span class="font-medium" x-text="formatMoney(total)"></span>
+                        </div>
+                        <div class="flex justify-between text-xl font-bold text-blue-600 pt-2 border-t border-gray-300">
+                            <span>Total:</span>
+                            <span x-text="formatMoney(total)"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Método de pago -->
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Método de Pago</h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors"
+                               :class="metodoPago === 'efectivo' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                            <input type="radio" x-model="metodoPago" @change="guardarCarritoActual()" value="efectivo" class="mr-3">
+                            <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>
+                            <span class="font-medium">Efectivo</span>
+                        </label>
+                        <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors"
+                               :class="metodoPago === 'nequi' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                            <input type="radio" x-model="metodoPago" @change="guardarCarritoActual()" value="nequi" class="mr-3">
+                            <i class="fas fa-mobile-alt text-purple-600 mr-2"></i>
+                            <span class="font-medium">Nequi</span>
+                        </label>
+                        <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors"
+                               :class="metodoPago === 'daviplata' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                            <input type="radio" x-model="metodoPago" @change="guardarCarritoActual()" value="daviplata" class="mr-3">
+                            <i class="fas fa-wallet text-blue-600 mr-2"></i>
+                            <span class="font-medium">Daviplata</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Campo de dinero recibido y vueltas (solo para efectivo) -->
+                    <div x-show="metodoPago === 'efectivo'" 
+                         x-transition
+                         class="mt-4 pt-4 border-t border-gray-300">
+                        <label for="dinero_recibido" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-money-bill mr-2"></i>Dinero Recibido
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">$</span>
+                            <input 
+                                type="text" 
+                                id="dinero_recibido"
+                                x-model="dineroRecibidoFormateado"
+                                @input="formatearDineroRecibido($event)"
+                                @blur="validarDineroRecibido()"
+                                placeholder="0"
+                                class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
+                            >
+                        </div>
+                        <div x-show="vueltasCalculadas > 0" 
+                             x-transition
+                             class="mt-3 p-3 bg-green-100 border border-green-400 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">
+                                    <i class="fas fa-hand-holding-usd mr-2"></i>Vueltas a dar:
+                                </span>
+                                <span class="text-xl font-bold text-green-700" x-text="formatMoney(vueltasCalculadas)"></span>
+                            </div>
+                        </div>
+                        <div x-show="vueltasCalculadas < 0" 
+                             x-transition
+                             class="mt-3 p-3 bg-red-100 border border-red-400 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>Falta:
+                                </span>
+                                <span class="text-xl font-bold text-red-700" x-text="formatMoney(Math.abs(vueltasCalculadas))"></span>
+                            </div>
+                        </div>
+                        <div x-show="vueltasCalculadas === 0 && dineroRecibido > 0" 
+                             x-transition
+                             class="mt-3 p-3 bg-blue-100 border border-blue-400 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">
+                                    <i class="fas fa-check-circle mr-2"></i>Pago exacto
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="mt-6 flex justify-between items-center">
+                <button @click="mostrarAyuda = !mostrarAyuda" 
+                        class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    <i class="fas fa-robot mr-2"></i>
+                    <span x-text="mostrarAyuda ? 'Ocultar Ayuda IA' : 'Asistente IA'"></span>
+                </button>
+                <div class="flex space-x-4">
+                    <button @click="limpiarVenta()" 
+                            class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-redo mr-2"></i>Limpiar
+                    </button>
+                    <button @click="procesarVenta()" 
+                            :disabled="items.length === 0 || !metodoPago || procesando"
+                            :class="items.length === 0 || !metodoPago || procesando ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+                            class="px-6 py-3 text-white rounded-lg transition-colors">
+                        <i class="fas fa-check mr-2"></i>
+                        <span x-text="procesando ? 'Procesando...' : 'Finalizar Venta'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Ayuda IA -->
+    <div x-show="mostrarAyuda" 
+         x-transition
+         class="fixed bottom-4 right-4 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 flex flex-col"
+         style="max-height: 600px;">
+        <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-4 rounded-t-lg flex justify-between items-center">
+            <div>
+                <h3 class="font-bold text-lg">
+                    <i class="fas fa-robot mr-2"></i>Asistente Veterinario
+                </h3>
+                <p class="text-xs text-purple-100">Experto en productos veterinarios</p>
+            </div>
+            <button @click="mostrarAyuda = false" class="text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4 space-y-3" style="max-height: 400px;">
+            <template x-if="mensajesAyuda.length === 0">
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-comments text-4xl mb-2 block"></i>
+                    <p class="text-sm">Haz una pregunta sobre productos veterinarios</p>
+                    <p class="text-xs mt-2">Ejemplo: "Necesito un desparasitante para gato"</p>
+                </div>
+            </template>
+            
+            <template x-for="(mensaje, index) in mensajesAyuda" :key="index">
+                <div :class="mensaje.tipo === 'usuario' ? 'flex justify-end' : 'flex justify-start'">
+                    <div :class="mensaje.tipo === 'usuario' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-900'"
+                         class="rounded-lg px-4 py-2 max-w-[80%]">
+                        <p class="text-sm whitespace-pre-wrap" x-text="mensaje.texto"></p>
+                        <p class="text-xs mt-1 opacity-70" x-text="mensaje.hora"></p>
+                    </div>
+                </div>
+            </template>
+            
+            <div x-show="procesandoAyuda" class="flex justify-start">
+                <div class="bg-gray-100 rounded-lg px-4 py-2">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    <span class="text-sm text-gray-600">Pensando...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-4 border-t border-gray-200">
+            <div class="flex space-x-2">
+                <input 
+                    type="text" 
+                    x-model="mensajeAyuda"
+                    @keyup.enter="enviarMensajeAyuda()"
+                    placeholder="Pregunta sobre productos..."
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    :disabled="procesandoAyuda"
+                >
+                <button @click="enviarMensajeAyuda()" 
+                        :disabled="!mensajeAyuda.trim() || procesandoAyuda"
+                        :class="!mensajeAyuda.trim() || procesandoAyuda ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'"
+                        class="px-4 py-2 text-white rounded-lg transition-colors">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de búsqueda por nombre -->
+    <div x-show="mostrarBusquedaNombre" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="cerrarBusquedaNombre()">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900">
+                    <i class="fas fa-search mr-2 text-purple-600"></i>Buscar Producto por Nombre
+                </h3>
+                <button @click="cerrarBusquedaNombre()" 
+                        class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <input 
+                    type="text" 
+                    x-model="busquedaNombre"
+                    @input="buscarPorNombre()"
+                    placeholder="Escribe el nombre del producto..."
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    autofocus
+                >
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <div x-show="buscandoProductos" class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-3xl text-purple-600"></i>
+                    <p class="mt-2 text-gray-600">Buscando productos...</p>
+                </div>
+                
+                <div x-show="!buscandoProductos && productosEncontrados.length === 0 && busquedaNombre.length > 0" 
+                     class="text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-4xl mb-2 block"></i>
+                    No se encontraron productos
+                </div>
+                
+                <div x-show="!buscandoProductos && busquedaNombre.length === 0" 
+                     class="text-center py-8 text-gray-500">
+                    <i class="fas fa-info-circle text-4xl mb-2 block"></i>
+                    Escribe el nombre del producto para buscar
+                </div>
+                
+                <div x-show="!buscandoProductos && productosEncontrados.length > 0" 
+                     class="space-y-2">
+                    <template x-for="producto in productosEncontrados" :key="producto.id">
+                        <div @click="agregarProductoDesdeBusqueda(producto)" 
+                             class="p-4 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 cursor-pointer transition-colors">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="font-medium text-gray-900" x-text="producto.nombre"></div>
+                                    <div class="text-sm text-gray-500 mt-1">
+                                        <span x-text="'Código: ' + producto.codigo_barras"></span>
+                                        <span class="mx-2">•</span>
+                                        <span x-text="'Stock: ' + producto.stock"></span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold text-purple-600" x-text="formatMoney(producto.precio_venta)"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de búsqueda de consulta -->
+    <div x-show="mostrarBusquedaConsulta" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="cerrarBusquedaConsulta()">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900">
+                    <i class="fas fa-stethoscope mr-2 text-green-600"></i>Traer Medicamentos de Consulta
+                </h3>
+                <button @click="cerrarBusquedaConsulta()" 
+                        class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <input type="text" 
+                       x-model="busquedaConsulta"
+                       @keyup.enter="buscarConsulta()"
+                       @input="buscarConsulta()"
+                       placeholder="Buscar por nombre del animal, dueño o ID de consulta..."
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <div class="flex-1 overflow-y-auto">
+                <div x-show="buscandoConsulta" class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-4xl text-green-600 mb-2 block"></i>
+                    <p class="text-gray-600">Buscando consultas...</p>
+                </div>
+                
+                <div x-show="!buscandoConsulta && consultasEncontradas.length === 0 && busquedaConsulta.length >= 2" 
+                     class="text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-4xl mb-2 block"></i>
+                    No se encontraron consultas con medicamentos disponibles
+                </div>
+                
+                <div x-show="!buscandoConsulta && busquedaConsulta.length === 0" 
+                     class="text-center py-8 text-gray-500">
+                    <i class="fas fa-info-circle text-4xl mb-2 block"></i>
+                    Escribe para buscar consultas con medicamentos
+                </div>
+                
+                <div x-show="!buscandoConsulta && consultasEncontradas.length > 0" 
+                     class="space-y-3">
+                    <template x-for="consulta in consultasEncontradas" :key="consulta.id">
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-green-50 hover:border-green-300 transition-colors">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-gray-900" x-text="'Animal: ' + consulta.animal_nombre"></div>
+                                    <div class="text-sm text-gray-600" x-text="'Dueño: ' + consulta.animal_dueno"></div>
+                                    <div class="text-xs text-gray-500 mt-1" x-text="'Fecha: ' + consulta.fecha + ' | ' + consulta.total_medicamentos + ' medicamentos'"></div>
+                                    <div class="text-xs text-gray-500 mt-1" x-text="'Motivo: ' + consulta.motivo"></div>
+                                </div>
+                                <button @click="traerMedicamentosDeConsulta(consulta)" 
+                                        class="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                    <i class="fas fa-arrow-right mr-2"></i>Traer
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de gestión de carritos -->
+    <div x-show="mostrarCarritos" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarCarritos = false">
+        <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900">
+                    <i class="fas fa-ticket-alt mr-2 text-indigo-600"></i>Gestión de Carritos
+                </h3>
+                <div class="flex space-x-2">
+                    <button @click="crearNuevoCarrito(); mostrarCarritos = false;" 
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Carrito
+                    </button>
+                    <button @click="mostrarCarritos = false" 
+                            class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <!-- Carrito Activo -->
+                <div class="mb-4 p-4 bg-blue-50 border-2 border-blue-500 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white mr-2">
+                                    ACTIVO
+                                </span>
+                                <span class="font-semibold text-gray-900" x-text="carritoActual.nombre"></span>
+                            </div>
+                            <div class="text-sm text-gray-600 mb-2">
+                                <span x-show="carritoActual.cliente" x-text="'Cliente: ' + carritoActual.cliente"></span>
+                                <span x-show="!carritoActual.cliente" class="text-gray-400">Sin cliente asignado</span>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                <span x-text="carritoActual.items.length + ' productos'"></span>
+                                <span class="mx-2">•</span>
+                                <span class="font-semibold text-blue-700" x-text="'Total: ' + formatMoney(calcularTotal())"></span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button @click="editarCarritoActual()" 
+                                    class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carritos Guardados -->
+                <div class="mb-4">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-3">
+                        <i class="fas fa-list mr-2"></i>Carritos Guardados
+                    </h4>
+                    <div x-show="carritosGuardados.length === 0" class="text-center py-8 text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2 block"></i>
+                        No hay carritos guardados
+                    </div>
+                    <div class="space-y-2">
+                        <template x-for="carrito in carritosGuardados" :key="carrito.id">
+                            <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="font-semibold text-gray-900 mb-1" x-text="carrito.nombre"></div>
+                                        <div class="text-sm text-gray-600 mb-2">
+                                            <span x-show="carrito.cliente" x-text="'Cliente: ' + carrito.cliente"></span>
+                                            <span x-show="!carrito.cliente" class="text-gray-400">Sin cliente asignado</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600">
+                                            <span x-text="carrito.items.length + ' productos'"></span>
+                                            <span class="mx-2">•</span>
+                                            <span class="font-semibold text-gray-700" 
+                                                  x-text="'Total: ' + formatMoney(carrito.items.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0))"></span>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button @click="cambiarACarrito(carrito)" 
+                                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                                            <i class="fas fa-arrow-right mr-1"></i>Cargar
+                                        </button>
+                                        <button @click="eliminarCarrito(carrito.id)" 
+                                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de éxito -->
+    <div x-show="mostrarExito" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarExito = false">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div class="text-center">
+                <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">¡Venta Exitosa!</h3>
+                <p class="text-gray-600 mb-4" x-text="'Número de venta: ' + numeroVenta"></p>
+                <p class="text-xl font-semibold text-blue-600 mb-6" x-text="'Total: ' + formatMoney(totalVenta)"></p>
+                <div class="flex space-x-3 justify-center">
+                    <button @click="generarPDF()" 
+                            class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-file-pdf mr-2"></i>Generar PDF
+                    </button>
+                    <button @click="nuevaVenta()" 
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Nueva Venta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Asegurar que la función esté disponible globalmente antes de que Alpine la necesite
+(function() {
+    'use strict';
+    
+    window.ventaApp = function() {
+        return {
+        codigoBarras: '',
+        items: [],
+        metodoPago: '',
+        procesando: false,
+        mostrarExito: false,
+        numeroVenta: '',
+        totalVenta: 0,
+        ventaId: null,
+        barcodeBuffer: '',
+        barcodeTimeout: null,
+        mostrarBusquedaNombre: false,
+        busquedaNombre: '',
+        productosEncontrados: [],
+        buscandoProductos: false,
+        mostrarBusquedaConsulta: false,
+        busquedaConsulta: '',
+        consultasEncontradas: [],
+        buscandoConsulta: false,
+        dineroRecibido: 0,
+        dineroRecibidoFormateado: '',
+        mostrarAyuda: false,
+        mensajesAyuda: [],
+        mensajeAyuda: '',
+        procesandoAyuda: false,
+        carritosGuardados: [],
+        mostrarCarritos: false,
+        carritoActual: { id: null, nombre: '', cliente: '', items: [], metodoPago: '' },
+        editandoCarrito: false,
+
+        handleBarcodeInput(event) {
+            const value = event.target.value;
+            this.barcodeBuffer = value;
+            
+            clearTimeout(this.barcodeTimeout);
+            this.barcodeTimeout = setTimeout(() => {
+                if (this.barcodeBuffer.length > 0) {
+                    this.buscarProducto();
+                }
+            }, 100);
+        },
+
+        async buscarProducto() {
+            const codigo = this.codigoBarras.trim();
+            if (!codigo) return;
+
+            try {
+                const response = await fetch(`/ventas/api/buscar-producto?codigo=${encodeURIComponent(codigo)}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.error || 'Error al buscar producto');
+                    this.codigoBarras = '';
+                    return;
+                }
+
+                // Verificar si el producto ya está en la venta
+                const itemExistente = this.items.find(item => item.id === data.id);
+                if (itemExistente) {
+                    if (itemExistente.cantidad < itemExistente.stock) {
+                        itemExistente.cantidad++;
+                        this.actualizarSubtotal(this.items.indexOf(itemExistente));
+                    } else {
+                        alert('No hay más stock disponible de este producto');
+                    }
+                } else {
+                    // Agregar nuevo producto
+                    this.items.push({
+                        id: data.id,
+                        nombre: data.nombre,
+                        codigo_barras: data.codigo_barras,
+                        precio_unitario: data.precio_venta,
+                        cantidad: 1,
+                        subtotal: data.precio_venta,
+                        stock: data.stock
+                    });
+                }
+
+                this.codigoBarras = '';
+                this.barcodeBuffer = '';
+                this.guardarCarritoActual();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al buscar el producto');
+            }
+        },
+
+        incrementarCantidad(index) {
+            if (this.items[index].cantidad < this.items[index].stock) {
+                this.items[index].cantidad++;
+                this.actualizarSubtotal(index);
+                this.guardarCarritoActual();
+            } else {
+                alert('No hay más stock disponible');
+            }
+        },
+
+        decrementarCantidad(index) {
+            if (this.items[index].cantidad > 1) {
+                this.items[index].cantidad--;
+                this.actualizarSubtotal(index);
+                this.guardarCarritoActual();
+            }
+        },
+
+        actualizarSubtotal(index) {
+            const item = this.items[index];
+            if (item.cantidad > item.stock) {
+                item.cantidad = item.stock;
+                alert('Cantidad ajustada al stock disponible');
+            }
+            item.subtotal = item.precio_unitario * item.cantidad;
+            this.guardarCarritoActual();
+        },
+
+        eliminarItem(index) {
+            if (confirm('¿Eliminar este producto de la venta?')) {
+                this.items.splice(index, 1);
+                this.guardarCarritoActual();
+            }
+        },
+
+        get total() {
+            return this.items.reduce((sum, item) => sum + item.subtotal, 0);
+        },
+        
+        get vueltasCalculadas() {
+            if (this.metodoPago !== 'efectivo') return 0;
+            const recibido = this.dineroRecibido || 0;
+            return recibido - this.total;
+        },
+        
+        formatearDineroRecibido(event) {
+            let valor = event.target.value;
+            // Remover todo excepto números
+            valor = valor.replace(/[^\d]/g, '');
+            
+            if (valor === '') {
+                this.dineroRecibido = 0;
+                this.dineroRecibidoFormateado = '';
+                return;
+            }
+            
+            // Convertir a número
+            const numero = parseInt(valor, 10);
+            this.dineroRecibido = numero;
+            
+            // Formatear con separadores de miles
+            this.dineroRecibidoFormateado = this.formatearNumero(numero);
+        },
+        
+        validarDineroRecibido() {
+            if (this.dineroRecibidoFormateado === '' && this.dineroRecibido === 0) {
+                this.dineroRecibidoFormateado = '';
+            } else if (this.dineroRecibido > 0) {
+                this.dineroRecibidoFormateado = this.formatearNumero(this.dineroRecibido);
+            }
+        },
+        
+        formatearNumero(numero) {
+            return numero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        },
+
+        formatMoney(value) {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 0
+            }).format(value);
+        },
+
+        async procesarVenta() {
+            if (this.items.length === 0 || !this.metodoPago) {
+                alert('Agrega productos y selecciona un método de pago');
+                return;
+            }
+
+            this.procesando = true;
+
+            try {
+                const response = await fetch('/ventas/procesar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        items: this.items.map(item => ({
+                            producto_id: item.id,
+                            cantidad: item.cantidad,
+                            precio_unitario: item.precio_unitario
+                        })),
+                        metodo_pago: this.metodoPago,
+                        notas: ''
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.error || 'Error al procesar la venta');
+                    this.procesando = false;
+                    return;
+                }
+
+                this.numeroVenta = data.numero_venta;
+                this.totalVenta = data.total;
+                this.ventaId = data.venta_id;
+                
+                // Eliminar carrito actual después de finalizar la venta exitosamente
+                if (this.carritoActual.id) {
+                    const carritos = this.cargarCarritosDeStorage();
+                    const nuevosCarritos = carritos.filter(c => c.id !== this.carritoActual.id);
+                    localStorage.setItem('carritos_ventas', JSON.stringify(nuevosCarritos));
+                }
+                
+                // Limpiar datos del carrito actual
+                this.items = [];
+                this.metodoPago = '';
+                this.carritoActual = { id: null, nombre: '', cliente: '', items: [], metodoPago: '' };
+                this.carritosGuardados = this.cargarCarritosDeStorage();
+                
+                this.mostrarExito = true;
+                this.procesando = false;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al procesar la venta');
+                this.procesando = false;
+            }
+        },
+
+        init() {
+            // Cargar carritos guardados al iniciar
+            this.cargarCarritosGuardados();
+            // Crear carrito por defecto si no hay ninguno
+            if (this.carritosGuardados.length === 0 && !this.carritoActual.id) {
+                this.crearNuevoCarrito();
+            }
+            // Auto-guardar cada 5 segundos
+            setInterval(() => {
+                this.guardarCarritoActual();
+            }, 5000);
+        },
+
+        crearNuevoCarrito() {
+            const nuevoId = Date.now().toString();
+            this.carritoActual = {
+                id: nuevoId,
+                nombre: `Carrito ${this.carritosGuardados.length + 1}`,
+                cliente: '',
+                items: [],
+                metodoPago: ''
+            };
+            this.items = [];
+            this.metodoPago = '';
+            this.guardarCarritoActual();
+        },
+
+        guardarCarritoActual() {
+            if (!this.carritoActual.id) {
+                this.crearNuevoCarrito();
+            }
+            
+            // Actualizar carrito actual con datos actuales
+            this.carritoActual.items = this.items.map(item => ({
+                id: item.id,
+                nombre: item.nombre,
+                codigo_barras: item.codigo_barras,
+                precio_unitario: item.precio_unitario,
+                cantidad: item.cantidad,
+                subtotal: item.subtotal,
+                stock: item.stock
+            }));
+            this.carritoActual.metodoPago = this.metodoPago;
+            
+            // Guardar en localStorage
+            const carritos = this.cargarCarritosDeStorage();
+            const index = carritos.findIndex(c => c.id === this.carritoActual.id);
+            
+            if (index >= 0) {
+                carritos[index] = { ...this.carritoActual };
+            } else {
+                carritos.push({ ...this.carritoActual });
+            }
+            
+            localStorage.setItem('carritos_ventas', JSON.stringify(carritos));
+            this.carritosGuardados = carritos.filter(c => c.id !== this.carritoActual.id);
+        },
+
+        cargarCarritosDeStorage() {
+            try {
+                const stored = localStorage.getItem('carritos_ventas');
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                return [];
+            }
+        },
+
+        cargarCarritosGuardados() {
+            const carritos = this.cargarCarritosDeStorage();
+            // Si hay un carrito activo, separarlo
+            if (this.carritoActual.id) {
+                const activoIndex = carritos.findIndex(c => c.id === this.carritoActual.id);
+                if (activoIndex >= 0) {
+                    this.carritoActual = carritos[activoIndex];
+                    this.items = this.carritoActual.items || [];
+                    this.metodoPago = this.carritoActual.metodoPago || '';
+                    this.carritosGuardados = carritos.filter(c => c.id !== this.carritoActual.id);
+                } else {
+                    this.carritosGuardados = carritos;
+                }
+            } else {
+                // Si no hay carrito activo, tomar el último como activo
+                if (carritos.length > 0) {
+                    this.carritoActual = carritos[carritos.length - 1];
+                    this.items = this.carritoActual.items || [];
+                    this.metodoPago = this.carritoActual.metodoPago || '';
+                    this.carritosGuardados = carritos.slice(0, -1);
+                } else {
+                    this.crearNuevoCarrito();
+                }
+            }
+        },
+
+        cambiarACarrito(carrito) {
+            // Guardar carrito actual antes de cambiar
+            this.guardarCarritoActual();
+            
+            // Cargar nuevo carrito
+            this.carritoActual = { ...carrito };
+            this.items = carrito.items.map(item => ({ ...item }));
+            this.metodoPago = carrito.metodoPago || '';
+            
+            // Actualizar lista de carritos guardados
+            this.carritosGuardados = this.cargarCarritosDeStorage().filter(c => c.id !== carrito.id);
+            this.mostrarCarritos = false;
+            
+            // Enfocar en el campo de código de barras
+            setTimeout(() => {
+                document.getElementById('codigo_barras')?.focus();
+            }, 100);
+        },
+
+        eliminarCarrito(carritoId) {
+            if (!confirm('¿Estás seguro de eliminar este carrito?')) {
+                return;
+            }
+            
+            const carritos = this.cargarCarritosDeStorage();
+            const nuevosCarritos = carritos.filter(c => c.id !== carritoId);
+            localStorage.setItem('carritos_ventas', JSON.stringify(nuevosCarritos));
+            
+            this.cargarCarritosGuardados();
+            
+            // Si se eliminó el carrito activo, crear uno nuevo
+            if (this.carritoActual.id === carritoId) {
+                this.crearNuevoCarrito();
+            }
+        },
+
+        editarCarritoActual() {
+            const nuevoNombre = prompt('Nombre del carrito:', this.carritoActual.nombre);
+            if (nuevoNombre !== null) {
+                this.carritoActual.nombre = nuevoNombre.trim() || this.carritoActual.nombre;
+            }
+            
+            const nuevoCliente = prompt('Nombre del cliente (opcional):', this.carritoActual.cliente || '');
+            if (nuevoCliente !== null) {
+                this.carritoActual.cliente = nuevoCliente.trim();
+            }
+            
+            this.guardarCarritoActual();
+        },
+
+        generarPDF() {
+            if (!this.ventaId) {
+                alert('No se pudo obtener el ID de la venta');
+                return;
+            }
+            // Abrir el PDF en una nueva ventana para descargarlo
+            window.open(`/ventas/pdf/${this.ventaId}`, '_blank');
+        },
+
+        nuevaVenta() {
+            // Crear nuevo carrito (el anterior ya fue eliminado al finalizar la venta)
+            this.crearNuevoCarrito();
+            this.mostrarExito = false;
+            this.ventaId = null;
+            this.dineroRecibido = 0;
+            this.dineroRecibidoFormateado = '';
+            document.getElementById('codigo_barras').focus();
+        },
+
+        limpiarVenta() {
+            if (confirm('¿Estás seguro de limpiar la venta actual?')) {
+                this.items = [];
+                this.metodoPago = '';
+                this.guardarCarritoActual();
+            }
+        },
+
+        calcularTotal() {
+            return this.items.reduce((sum, item) => sum + item.subtotal, 0);
+        },
+
+        async buscarPorNombre() {
+            const nombre = this.busquedaNombre.trim();
+            if (nombre.length < 2) {
+                this.productosEncontrados = [];
+                this.buscandoProductos = false;
+                return;
+            }
+
+            this.buscandoProductos = true;
+            try {
+                const response = await fetch(`/ventas/api/buscar-producto-nombre?nombre=${encodeURIComponent(nombre)}`);
+                const data = await response.json();
+                this.productosEncontrados = Array.isArray(data) ? data : [];
+            } catch (error) {
+                console.error('Error:', error);
+                this.productosEncontrados = [];
+            } finally {
+                this.buscandoProductos = false;
+            }
+        },
+
+        agregarProductoDesdeBusqueda(producto) {
+            // Verificar si el producto ya está en la venta
+            const itemExistente = this.items.find(item => item.id === producto.id);
+            if (itemExistente) {
+                if (itemExistente.cantidad < itemExistente.stock) {
+                    itemExistente.cantidad++;
+                    this.actualizarSubtotal(this.items.indexOf(itemExistente));
+                } else {
+                    alert('No hay más stock disponible de este producto');
+                    return;
+                }
+            } else {
+                // Agregar nuevo producto
+                this.items.push({
+                    id: producto.id,
+                    nombre: producto.nombre,
+                    codigo_barras: producto.codigo_barras,
+                    precio_unitario: producto.precio_venta,
+                    cantidad: 1,
+                    subtotal: producto.precio_venta,
+                    stock: producto.stock
+                });
+            }
+
+            this.guardarCarritoActual();
+            this.cerrarBusquedaNombre();
+        },
+
+        cerrarBusquedaNombre() {
+            this.mostrarBusquedaNombre = false;
+            this.busquedaNombre = '';
+            this.productosEncontrados = [];
+        },
+
+        async buscarConsulta() {
+            if (this.busquedaConsulta.length < 2) {
+                this.consultasEncontradas = [];
+                return;
+            }
+
+            this.buscandoConsulta = true;
+            try {
+                const response = await fetch(`/ventas/api/buscar-consulta?q=${encodeURIComponent(this.busquedaConsulta)}`);
+                const data = await response.json();
+                this.consultasEncontradas = Array.isArray(data) ? data : [];
+            } catch (error) {
+                console.error('Error:', error);
+                this.consultasEncontradas = [];
+            } finally {
+                this.buscandoConsulta = false;
+            }
+        },
+
+        traerMedicamentosDeConsulta(consulta) {
+            if (!consulta.items || consulta.items.length === 0) {
+                alert('Esta consulta no tiene medicamentos');
+                return;
+            }
+
+            // Agregar cada medicamento a la venta
+            consulta.items.forEach(item => {
+                const producto = {
+                    id: item.producto_id,
+                    nombre: item.producto_nombre,
+                    codigo_barras: item.producto_codigo,
+                    precio_venta: item.producto_precio,
+                    stock: 999 // Asumimos que hay stock si está en la consulta
+                };
+
+                // Verificar si el producto ya está en la venta
+                const itemExistente = this.items.find(i => i.id === producto.id);
+                if (itemExistente) {
+                    // Incrementar cantidad si hay stock disponible
+                    if (itemExistente.cantidad < itemExistente.stock) {
+                        itemExistente.cantidad += item.cantidad;
+                        if (itemExistente.cantidad > itemExistente.stock) {
+                            itemExistente.cantidad = itemExistente.stock;
+                        }
+                        this.actualizarSubtotal(this.items.indexOf(itemExistente));
+                    }
+                } else {
+                    // Agregar nuevo producto
+                    this.items.push({
+                        id: producto.id,
+                        nombre: producto.nombre,
+                        codigo_barras: producto.codigo_barras,
+                        precio_unitario: producto.precio_venta,
+                        cantidad: item.cantidad,
+                        subtotal: producto.precio_venta * item.cantidad,
+                        stock: producto.stock
+                    });
+                }
+            });
+
+            this.guardarCarritoActual();
+            this.cerrarBusquedaConsulta();
+            alert(`Se agregaron ${consulta.items.length} medicamento(s) de la consulta`);
+        },
+
+        cerrarBusquedaConsulta() {
+            this.mostrarBusquedaConsulta = false;
+            this.busquedaConsulta = '';
+            this.consultasEncontradas = [];
+        },
+
+        async enviarMensajeAyuda() {
+            const mensaje = this.mensajeAyuda.trim();
+            if (!mensaje || this.procesandoAyuda) return;
+
+            // Agregar mensaje del usuario
+            this.mensajesAyuda.push({
+                tipo: 'usuario',
+                texto: mensaje,
+                hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+            });
+
+            this.mensajeAyuda = '';
+            this.procesandoAyuda = true;
+
+            try {
+                const response = await fetch('/ventas/api/chat-ayuda', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ mensaje: mensaje })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al procesar la consulta');
+                }
+
+                // Agregar respuesta de la IA
+                this.mensajesAyuda.push({
+                    tipo: 'asistente',
+                    texto: data.respuesta,
+                    hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                });
+
+                // Scroll al final
+                setTimeout(() => {
+                    const chatContainer = document.querySelector('[style*="max-height: 400px"]');
+                    if (chatContainer) {
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
+                }, 100);
+
+            } catch (error) {
+                console.error('Error:', error);
+                this.mensajesAyuda.push({
+                    tipo: 'asistente',
+                    texto: 'Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.',
+                    hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                });
+            } finally {
+                this.procesandoAyuda = false;
+            }
+        }
+        };
+    };
+})();
+</script>
+{% endblock %}
+

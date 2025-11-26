@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Ventas - Veterinaria{% endblock %}
+
+{% block content %}
+<div x-data="ventasApp()" x-cloak>
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">
+                <i class="fas fa-list mr-2 text-blue-600"></i>Historial de Ventas
+            </h2>
+
+            <!-- Filtros -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
+                    <input type="date" 
+                           x-model="fechaInicio"
+                           @change="cargarVentas()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
+                    <input type="date" 
+                           x-model="fechaFin"
+                           @change="cargarVentas()"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Empleado</label>
+                    <select x-model="usuarioId"
+                            @change="cargarVentas()"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todos los empleados</option>
+                        <template x-for="usuario in usuarios || []" :key="usuario.id">
+                            <option :value="usuario.id" x-text="usuario.username"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button @click="limpiarFiltros()" 
+                            class="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                        <i class="fas fa-redo mr-2"></i>Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla de ventas -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empleado</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método Pago</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Devoluciones</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PDF</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <template x-for="venta in ventas" :key="venta.id">
+                            <tr :class="venta.tiene_devoluciones ? 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-500' : 'hover:bg-gray-50'">
+                                <td class="px-4 py-3 text-sm font-mono font-medium text-gray-900" x-text="venta.numero_venta"></td>
+                                <td class="px-4 py-3 text-sm text-gray-900" x-text="formatFecha(venta.fecha_venta)"></td>
+                                <td class="px-4 py-3 text-sm">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-user text-gray-400 mr-2"></i>
+                                        <span class="text-gray-900" x-text="venta.usuario_nombre || 'N/A'"></span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full capitalize"
+                                          :class="getMetodoPagoClass(venta.metodo_pago)"
+                                          x-text="venta.metodo_pago"></span>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <div class="font-semibold text-gray-900" x-text="formatMoney(venta.total)"></div>
+                                    <template x-if="venta.tiene_devoluciones">
+                                        <div class="text-xs text-orange-600 mt-1">
+                                            Devuelto: <span class="font-semibold" x-text="formatMoney(venta.total_devuelto)"></span>
+                                        </div>
+                                    </template>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-900" x-text="venta.items.length + ' productos'"></td>
+                                <td class="px-4 py-3 text-sm">
+                                    <template x-if="venta.tiene_devoluciones">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                                <i class="fas fa-undo mr-1"></i>
+                                                <span x-text="venta.cantidad_devoluciones + ' devolución(es)'"></span>
+                                            </span>
+                                        </div>
+                                    </template>
+                                    <template x-if="!venta.tiene_devoluciones">
+                                        <span class="text-gray-400 text-xs">
+                                            <i class="fas fa-check-circle mr-1"></i>Sin devoluciones
+                                        </span>
+                                    </template>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-center">
+                                    <a :href="'/ventas/pdf/' + venta.id" 
+                                       target="_blank"
+                                       class="text-red-600 hover:text-red-900"
+                                       title="Generar PDF">
+                                        <i class="fas fa-file-pdf text-xl"></i>
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <a :href="'/ventas/pdf/' + venta.id" 
+                                       target="_blank"
+                                       class="text-red-600 hover:text-red-900"
+                                       title="Generar PDF">
+                                        <i class="fas fa-file-pdf text-xl"></i>
+                                    </a>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <div class="flex space-x-2">
+                                        <button @click="verDetalle(venta)" 
+                                                class="text-blue-600 hover:text-blue-800"
+                                                title="Ver detalle">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="abrirDevolucion(venta.id)" 
+                                                class="text-orange-600 hover:text-orange-800"
+                                                title="Procesar devolución">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="ventas.length === 0 && !cargando">
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                    No hay ventas registradas
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="cargando">
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center">
+                                    <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="mt-6 flex justify-between items-center" x-show="totalPaginas > 1">
+                <button @click="paginaAnterior()" 
+                        :disabled="paginaActual === 1"
+                        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50">
+                    <i class="fas fa-chevron-left mr-2"></i>Anterior
+                </button>
+                <span class="text-sm text-gray-600" x-text="'Página ' + paginaActual + ' de ' + totalPaginas"></span>
+                <button @click="paginaSiguiente()" 
+                        :disabled="paginaActual >= totalPaginas"
+                        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50">
+                    Siguiente<i class="fas fa-chevron-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de detalle -->
+    <div x-show="mostrarDetalle" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarDetalle = false">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-900">Detalle de Venta</h3>
+                <button @click="mostrarDetalle = false" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <template x-if="ventaSeleccionada">
+                <div>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600">Número de Venta</p>
+                        <p class="text-lg font-semibold" x-text="ventaSeleccionada.numero_venta"></p>
+                    </div>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600">Fecha</p>
+                        <p class="text-lg" x-text="formatFecha(ventaSeleccionada.fecha_venta)"></p>
+                    </div>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600">Método de Pago</p>
+                        <p class="text-lg capitalize" x-text="ventaSeleccionada.metodo_pago"></p>
+                    </div>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600">Productos</p>
+                        <div class="mt-2 space-y-2">
+                            <template x-for="item in ventaSeleccionada.items" :key="item.id">
+                                <div class="flex justify-between p-2 bg-gray-50 rounded">
+                                    <span x-text="item.producto_nombre + ' x' + item.cantidad"></span>
+                                    <span class="font-semibold" x-text="formatMoney(item.subtotal)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between text-xl font-bold">
+                            <span>Total:</span>
+                            <span class="text-blue-600" x-text="formatMoney(ventaSeleccionada.total)"></span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Modal de devolución -->
+    <div x-show="mostrarDevolucion" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="cerrarDevolucion()">
+        <div class="bg-white rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-undo mr-2 text-orange-600"></i>Procesar Devolución
+                </h3>
+                <button @click="cerrarDevolucion()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <template x-if="ventaDevolucion">
+                <div>
+                    <div class="mb-4 p-4 bg-blue-50 rounded-lg">
+                        <p class="text-sm text-gray-600">Venta</p>
+                        <p class="text-lg font-semibold" x-text="ventaDevolucion.numero_venta"></p>
+                        <p class="text-sm text-gray-600 mt-1">Total: <span class="font-semibold" x-text="formatMoney(ventaDevolucion.total)"></span></p>
+                        <template x-if="ventaDevolucion.total_devuelto > 0">
+                            <p class="text-sm text-orange-600 mt-1">
+                                Ya devuelto: <span class="font-semibold" x-text="formatMoney(ventaDevolucion.total_devuelto)"></span>
+                            </p>
+                        </template>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Motivo de la devolución</label>
+                        <textarea x-model="motivoDevolucion" 
+                                  rows="3"
+                                  placeholder="Ingrese el motivo de la devolución..."
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="text-lg font-semibold text-gray-900 mb-3">Productos a devolver</h4>
+                        <div class="space-y-3">
+                            <template x-for="item in ventaDevolucion.items" :key="item.id">
+                                <div class="p-4 border border-gray-200 rounded-lg" 
+                                     x-show="item.cantidad_disponible > 0">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex-1">
+                                            <p class="font-medium text-gray-900" x-text="item.producto_nombre"></p>
+                                            <p class="text-sm text-gray-500">
+                                                Vendido: <span x-text="item.cantidad"></span>
+                                                <template x-if="item.cantidad_devuelta > 0">
+                                                    <span class="text-orange-600"> | Ya devuelto: <span x-text="item.cantidad_devuelta"></span></span>
+                                                </template>
+                                            </p>
+                                            <p class="text-sm font-semibold text-gray-700 mt-1">
+                                                Precio unitario: <span x-text="formatMoney(item.precio_unitario)"></span>
+                                            </p>
+                                        </div>
+                                        <div class="ml-4">
+                                            <label class="block text-xs text-gray-600 mb-1">Cantidad a devolver</label>
+                                            <input type="number" 
+                                                   x-model="item.cantidad_a_devolver"
+                                                   :max="item.cantidad_disponible"
+                                                   min="0"
+                                                   @input="actualizarCantidadDevolucion(item)"
+                                                   class="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-orange-500">
+                                            <p class="text-xs text-gray-500 mt-1">Disponible: <span x-text="item.cantidad_disponible"></span></p>
+                                        </div>
+                                    </div>
+                                    <template x-if="item.cantidad_a_devolver > 0">
+                                        <div class="mt-2 pt-2 border-t border-gray-200">
+                                            <p class="text-sm text-gray-600">
+                                                Subtotal: <span class="font-semibold text-orange-600" x-text="formatMoney(item.cantidad_a_devolver * item.precio_unitario)"></span>
+                                            </p>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4 mb-4">
+                        <div class="flex justify-between text-xl font-bold">
+                            <span>Total a devolver:</span>
+                            <span class="text-orange-600" x-text="formatMoney(totalDevolucion)"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-4">
+                        <button @click="cerrarDevolucion()" 
+                                class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                            Cancelar
+                        </button>
+                        <button @click="procesarDevolucion()" 
+                                :disabled="totalDevolucion === 0 || procesandoDevolucion"
+                                :class="totalDevolucion === 0 || procesandoDevolucion ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'"
+                                class="px-6 py-2 text-white rounded-lg transition-colors">
+                            <i class="fas fa-check mr-2"></i>
+                            <span x-text="procesandoDevolucion ? 'Procesando...' : 'Procesar Devolución'"></span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+function ventasApp() {
+    return {
+        ventas: [],
+        usuarios: [],
+        cargando: false,
+        paginaActual: 1,
+        totalPaginas: 1,
+        fechaInicio: '',
+        fechaFin: '',
+        usuarioId: '',
+        mostrarDetalle: false,
+        ventaSeleccionada: null,
+        mostrarDevolucion: false,
+        ventaDevolucion: null,
+        motivoDevolucion: '',
+        procesandoDevolucion: false,
+
+        async init() {
+            await this.cargarUsuarios();
+            await this.cargarVentas();
+        },
+
+        async cargarUsuarios() {
+            try {
+                const response = await fetch('/admin/api/estadisticas');
+                const data = await response.json();
+                this.usuarios = data.usuarios || [];
+            } catch (error) {
+                console.error('Error al cargar usuarios:', error);
+            }
+        },
+
+        async cargarVentas() {
+            this.cargando = true;
+            try {
+                let url = `/admin/api/ventas?pagina=${this.paginaActual}&por_pagina=20`;
+                if (this.fechaInicio) url += `&fecha_inicio=${this.fechaInicio}`;
+                if (this.fechaFin) url += `&fecha_fin=${this.fechaFin}`;
+                if (this.usuarioId) url += `&usuario_id=${this.usuarioId}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+                this.ventas = data.ventas;
+                this.totalPaginas = data.paginas;
+            } catch (error) {
+                console.error('Error al cargar ventas:', error);
+            } finally {
+                this.cargando = false;
+            }
+        },
+
+        limpiarFiltros() {
+            this.fechaInicio = '';
+            this.fechaFin = '';
+            this.usuarioId = '';
+            this.paginaActual = 1;
+            this.cargarVentas();
+        },
+
+        paginaAnterior() {
+            if (this.paginaActual > 1) {
+                this.paginaActual--;
+                this.cargarVentas();
+            }
+        },
+
+        paginaSiguiente() {
+            if (this.paginaActual < this.totalPaginas) {
+                this.paginaActual++;
+                this.cargarVentas();
+            }
+        },
+
+        verDetalle(venta) {
+            this.ventaSeleccionada = venta;
+            this.mostrarDetalle = true;
+        },
+
+        formatMoney(value) {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 0
+            }).format(value);
+        },
+
+        formatFecha(fecha) {
+            return new Date(fecha).toLocaleString('es-ES');
+        },
+
+        getMetodoPagoClass(metodo) {
+            const classes = {
+                'efectivo': 'bg-green-100 text-green-800',
+                'nequi': 'bg-purple-100 text-purple-800',
+                'daviplata': 'bg-blue-100 text-blue-800'
+            };
+            return classes[metodo] || 'bg-gray-100 text-gray-800';
+        },
+
+        async abrirDevolucion(ventaId) {
+            try {
+                const response = await fetch(`/admin/api/venta/${ventaId}`);
+                const data = await response.json();
+                
+                // Inicializar cantidad_a_devolver para cada item
+                data.items.forEach(item => {
+                    item.cantidad_a_devolver = 0;
+                });
+                
+                this.ventaDevolucion = data;
+                this.motivoDevolucion = '';
+                this.mostrarDevolucion = true;
+            } catch (error) {
+                console.error('Error al cargar venta:', error);
+                alert('Error al cargar los datos de la venta');
+            }
+        },
+
+        actualizarCantidadDevolucion(item) {
+            if (item.cantidad_a_devolver > item.cantidad_disponible) {
+                item.cantidad_a_devolver = item.cantidad_disponible;
+                alert('La cantidad no puede ser mayor a la disponible');
+            }
+            if (item.cantidad_a_devolver < 0) {
+                item.cantidad_a_devolver = 0;
+            }
+        },
+
+        get totalDevolucion() {
+            if (!this.ventaDevolucion) return 0;
+            return this.ventaDevolucion.items.reduce((sum, item) => {
+                const cantidad = item.cantidad_a_devolver || 0;
+                return sum + (cantidad * item.precio_unitario);
+            }, 0);
+        },
+
+        async procesarDevolucion() {
+            if (this.totalDevolucion === 0) {
+                alert('Seleccione al menos un producto para devolver');
+                return;
+            }
+
+            const items = this.ventaDevolucion.items
+                .filter(item => item.cantidad_a_devolver > 0)
+                .map(item => ({
+                    item_venta_id: item.id,
+                    cantidad: item.cantidad_a_devolver
+                }));
+
+            this.procesandoDevolucion = true;
+
+            try {
+                const response = await fetch('/admin/api/devolucion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        venta_id: this.ventaDevolucion.id,
+                        items: items,
+                        motivo: this.motivoDevolucion
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.error || 'Error al procesar la devolución');
+                    this.procesandoDevolucion = false;
+                    return;
+                }
+
+                alert(`Devolución procesada exitosamente\nNúmero: ${data.numero_devolucion}\nTotal: ${this.formatMoney(data.total_devolucion)}`);
+                this.cerrarDevolucion();
+                this.cargarVentas();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al procesar la devolución');
+                this.procesandoDevolucion = false;
+            }
+        },
+
+        cerrarDevolucion() {
+            this.mostrarDevolucion = false;
+            this.ventaDevolucion = null;
+            this.motivoDevolucion = '';
+        }
+    }
+}
+
+// Cargar ventas al iniciar
+document.addEventListener('alpine:init', () => {
+    setTimeout(() => {
+        const app = Alpine.$data(document.querySelector('[x-data="ventasApp()"]'));
+        if (app) app.init();
+    }, 100);
+});
+</script>
+{% endblock %}
+
+

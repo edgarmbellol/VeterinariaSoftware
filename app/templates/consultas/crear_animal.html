@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{% if animal %}Editar{% else %}Registrar{% endif %} Animal - Veterinaria{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg max-w-3xl mx-auto">
+    <div class="px-4 py-5 sm:p-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+            <i class="fas fa-{% if animal %}edit{% else %}plus-circle{% endif %} mr-2 text-blue-600"></i>
+            {% if animal %}Editar{% else %}Registrar{% endif %} Animal
+        </h2>
+
+        <form method="POST" action="{% if animal %}{{ url_for('consultas.editar_animal', id=animal.id) }}{% else %}{{ url_for('consultas.crear_animal') }}{% endif %}">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="nombre" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-paw mr-2"></i>Nombre del Animal *
+                    </label>
+                    <input type="text" 
+                           id="nombre" 
+                           name="nombre" 
+                           required
+                           value="{% if animal %}{{ animal.nombre }}{% endif %}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ej: Max, Luna, Rocky">
+                </div>
+
+                <div>
+                    <label for="especie" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-dog mr-2"></i>Especie *
+                    </label>
+                    <select id="especie" 
+                            name="especie" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Seleccione...</option>
+                        <option value="Perro" {% if animal and animal.especie == 'Perro' %}selected{% endif %}>Perro</option>
+                        <option value="Gato" {% if animal and animal.especie == 'Gato' %}selected{% endif %}>Gato</option>
+                        <option value="Conejo" {% if animal and animal.especie == 'Conejo' %}selected{% endif %}>Conejo</option>
+                        <option value="Ave" {% if animal and animal.especie == 'Ave' %}selected{% endif %}>Ave</option>
+                        <option value="Roedor" {% if animal and animal.especie == 'Roedor' %}selected{% endif %}>Roedor</option>
+                        <option value="Otro" {% if animal and animal.especie == 'Otro' %}selected{% endif %}>Otro</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="raza" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-dna mr-2"></i>Raza
+                    </label>
+                    <input type="text" 
+                           id="raza" 
+                           name="raza" 
+                           value="{% if animal %}{{ animal.raza }}{% endif %}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ej: Labrador, Persa, etc.">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="edad_anos" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-birthday-cake mr-2"></i>Años
+                        </label>
+                        <input type="number" 
+                               id="edad_anos" 
+                               name="edad_anos" 
+                               min="0"
+                               max="50"
+                               value="{% if animal %}{{ animal.edad_anos or 0 }}{% else %}0{% endif %}"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="0">
+                    </div>
+                    <div>
+                        <label for="edad_meses" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-calendar-alt mr-2"></i>Meses
+                        </label>
+                        <input type="number" 
+                               id="edad_meses" 
+                               name="edad_meses" 
+                               min="0"
+                               max="11"
+                               value="{% if animal %}{{ animal.edad_meses or 0 }}{% else %}0{% endif %}"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="0">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 border-t pt-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-user mr-2"></i>Datos del Dueño
+                    </h3>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="nombre_dueno" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-2"></i>Nombre del Dueño *
+                    </label>
+                    <input type="text" 
+                           id="nombre_dueno" 
+                           name="nombre_dueno" 
+                           required
+                           value="{% if animal %}{{ animal.nombre_dueno }}{% endif %}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Nombre completo del dueño">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="telefono_dueno" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-phone mr-2"></i>Teléfono de Contacto
+                    </label>
+                    <input type="text" 
+                           id="telefono_dueno" 
+                           name="telefono_dueno" 
+                           value="{% if animal %}{{ animal.telefono_dueno }}{% endif %}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ej: 3001234567">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="notas" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note mr-2"></i>Notas Generales
+                    </label>
+                    <textarea id="notas" 
+                              name="notas" 
+                              rows="4"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Información adicional sobre el animal...">{% if animal %}{{ animal.notas or '' }}{% endif %}</textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-4">
+                <a href="{% if animal %}{{ url_for('consultas.historia_clinica', id=animal.id) }}{% else %}{{ url_for('consultas.listar') }}{% endif %}" 
+                   class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-save mr-2"></i>Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

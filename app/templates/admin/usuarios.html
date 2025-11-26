@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios - Veterinaria{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <h2 class="text-2xl font-bold text-gray-900">
+        <i class="fas fa-users mr-2 text-blue-600"></i>Gestión de Usuarios
+    </h2>
+    <a href="{{ url_for('admin.crear_usuario') }}" 
+       class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+        <i class="fas fa-user-plus mr-2"></i>Crear Usuario
+    </a>
+</div>
+
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Usuario
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Rol
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estado
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fecha de Creación
+                    </th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for usuario in usuarios %}
+                <tr class="hover:bg-gray-50 {% if not usuario.activo %}opacity-60{% endif %}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ usuario.username }}
+                                </div>
+                                {% if usuario.nombre_completo %}
+                                <div class="text-sm text-gray-500">
+                                    {{ usuario.nombre_completo }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if usuario.es_admin %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                            <i class="fas fa-crown mr-1"></i>Administrador
+                        </span>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                            <i class="fas fa-user mr-1"></i>Usuario
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if usuario.activo %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1"></i>Activo
+                        </span>
+                        {% else %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            <i class="fas fa-times-circle mr-1"></i>Inactivo
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if usuario.fecha_creacion %}
+                        {{ usuario.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {% if usuario.activo and usuario.id != current_user.id %}
+                        <form method="POST" action="{{ url_for('admin.eliminar_usuario', id=usuario.id) }}" 
+                              class="inline"
+                              onsubmit="return confirm('¿Estás seguro de que deseas desactivar este usuario?');">
+                            <button type="submit" 
+                                    class="text-red-600 hover:text-red-900 transition-colors">
+                                <i class="fas fa-trash-alt mr-1"></i>Desactivar
+                            </button>
+                        </form>
+                        {% elif not usuario.activo %}
+                        <span class="text-gray-400">Desactivado</span>
+                        {% else %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if usuarios|length == 0 %}
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                        <i class="fas fa-users text-4xl mb-2 block"></i>
+                        No hay usuarios registrados
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4 text-sm text-gray-600">
+    <p><i class="fas fa-info-circle mr-2"></i>Los usuarios desactivados no podrán iniciar sesión en el sistema.</p>
+</div>
+{% endblock %}
+

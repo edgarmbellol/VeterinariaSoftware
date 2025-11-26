@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Venta desde Consulta - Veterinaria{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg max-w-4xl mx-auto">
+    <div class="px-4 py-5 sm:p-6">
+        <div class="mb-6">
+            <a href="{{ url_for('consultas.historia_clinica', id=consulta.animal_id) }}" 
+               class="text-blue-600 hover:text-blue-900 mb-4 inline-block">
+                <i class="fas fa-arrow-left mr-2"></i>Volver a Historia Clínica
+            </a>
+            <h2 class="text-2xl font-bold text-gray-900">
+                <i class="fas fa-shopping-cart mr-2 text-blue-600"></i>Crear Venta desde Consulta
+            </h2>
+            <p class="text-gray-600 mt-1">
+                Animal: <span class="font-semibold">{{ consulta.animal.nombre }}</span> | 
+                Dueño: {{ consulta.animal.nombre_dueno }}
+            </p>
+        </div>
+
+        <form method="POST" action="{{ url_for('consultas.crear_venta_desde_consulta', consulta_id=consulta.id) }}">
+            <div class="space-y-6">
+                <!-- Resumen de medicamentos -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-pills mr-2 text-green-600"></i>Medicamentos a Cobrar
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Medicamento</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for item in consulta.items %}
+                                <tr>
+                                    <td class="px-4 py-3">
+                                        <div class="font-medium text-gray-900">{{ item.producto.nombre }}</div>
+                                        {% if item.notas %}
+                                        <div class="text-xs text-gray-500">{{ item.notas }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ item.cantidad }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">${{ "{:,.0f}".format(item.producto.precio_venta) }}</td>
+                                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">
+                                        ${{ "{:,.0f}".format(item.producto.precio_venta * item.cantidad) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="bg-gray-50">
+                                <tr>
+                                    <td colspan="3" class="px-4 py-3 text-right font-semibold text-gray-900">Total:</td>
+                                    <td class="px-4 py-3 text-lg font-bold text-blue-600">
+                                        {% set total = 0 %}{% for item in consulta.items %}{% set total = total + (item.producto.precio_venta * item.cantidad) %}{% endfor %}${{ "{:,.0f}".format(total) }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Método de pago -->
+                <div>
+                    <label for="metodo_pago" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-money-bill-wave mr-2"></i>Método de Pago *
+                    </label>
+                    <select id="metodo_pago" 
+                            name="metodo_pago" 
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Seleccione...</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="nequi">Nequi</option>
+                        <option value="daviplata">Daviplata</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-4">
+                <a href="{{ url_for('consultas.historia_clinica', id=consulta.animal_id) }}" 
+                   class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>Crear Venta y Generar PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

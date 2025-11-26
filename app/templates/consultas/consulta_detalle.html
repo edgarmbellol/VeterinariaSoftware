@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Consulta - Veterinaria{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg max-w-4xl mx-auto">
+    <div class="px-4 py-5 sm:p-6">
+        <div class="mb-6">
+            <a href="{{ url_for('consultas.historia_clinica', id=consulta.animal_id) }}" 
+               class="text-blue-600 hover:text-blue-900 mb-4 inline-block">
+                <i class="fas fa-arrow-left mr-2"></i>Volver a Historia Clínica
+            </a>
+            <h2 class="text-2xl font-bold text-gray-900">
+                <i class="fas fa-file-medical mr-2 text-blue-600"></i>Detalle de Consulta
+            </h2>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Información General -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-sm font-medium text-gray-600 mb-1">
+                            <i class="fas fa-calendar-alt mr-2"></i>Fecha de Consulta
+                        </div>
+                        <div class="text-lg font-semibold text-gray-900">
+                            {{ consulta.fecha_consulta.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-600 mb-1">
+                            <i class="fas fa-user-md mr-2"></i>Atendido por
+                        </div>
+                        <div class="text-lg font-semibold text-gray-900">
+                            {{ consulta.usuario.username if consulta.usuario else 'No especificado' }}
+                        </div>
+                    </div>
+                    {% if consulta.venta %}
+                    <div>
+                        <div class="text-sm font-medium text-gray-600 mb-1">
+                            <i class="fas fa-shopping-cart mr-2"></i>Venta Asociada
+                        </div>
+                        <div class="text-lg font-semibold text-gray-900">
+                            <a href="{{ url_for('admin.listar_ventas') }}" class="text-blue-600 hover:text-blue-900">
+                                {{ consulta.venta.numero_venta }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Motivo -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">
+                    <i class="fas fa-question-circle mr-2 text-orange-500"></i>Motivo de Consulta
+                </h3>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <p class="text-gray-900 whitespace-pre-wrap">{{ consulta.motivo }}</p>
+                </div>
+            </div>
+
+            <!-- Diagnóstico -->
+            {% if consulta.diagnostico %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">
+                    <i class="fas fa-clipboard-check mr-2 text-red-500"></i>Diagnóstico
+                </h3>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <p class="text-gray-900 whitespace-pre-wrap">{{ consulta.diagnostico }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tratamiento -->
+            {% if consulta.tratamiento %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">
+                    <i class="fas fa-pills mr-2 text-green-500"></i>Tratamiento
+                </h3>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-gray-900 whitespace-pre-wrap">{{ consulta.tratamiento }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Observaciones -->
+            {% if consulta.observaciones %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">
+                    <i class="fas fa-sticky-note mr-2 text-blue-500"></i>Observaciones
+                </h3>
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-gray-900 whitespace-pre-wrap">{{ consulta.observaciones }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Medicamentos Prescritos -->
+            {% if consulta.items|length > 0 %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">
+                    <i class="fas fa-pills mr-2 text-green-500"></i>Medicamentos Prescritos
+                </h3>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-green-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Medicamento</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Cantidad</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Precio Unit.</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Subtotal</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Notas</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for item in consulta.items %}
+                                <tr>
+                                    <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ item.producto.nombre }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-900">{{ item.cantidad }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-900">${{ "{:,.0f}".format(item.producto.precio_venta) }}</td>
+                                    <td class="px-4 py-2 text-sm font-semibold text-gray-900">
+                                        ${{ "{:,.0f}".format(item.producto.precio_venta * item.cantidad) }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-600">{{ item.notas or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="bg-green-100">
+                                <tr>
+                                    <td colspan="3" class="px-4 py-2 text-right font-semibold text-gray-900">Total:</td>
+                                    <td class="px-4 py-2 text-lg font-bold text-green-700">
+                                        {% set total = 0 %}{% for item in consulta.items %}{% set total = total + (item.producto.precio_venta * item.cantidad) %}{% endfor %}${{ "{:,.0f}".format(total) }}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-6 flex justify-between">
+            <div>
+                {% if consulta.items|length > 0 and not consulta.venta %}
+                <a href="{{ url_for('consultas.crear_venta_desde_consulta', consulta_id=consulta.id) }}" 
+                   class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-shopping-cart mr-2"></i>Crear Venta con Medicamentos
+                </a>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('consultas.historia_clinica', id=consulta.animal_id) }}" 
+               class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>Volver
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

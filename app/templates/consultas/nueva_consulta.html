@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Consulta - {{ animal.nombre }} - Veterinaria{% endblock %}
+
+{% block content %}
+<div x-data="consultaApp()" x-cloak>
+<div class="bg-white shadow rounded-lg max-w-5xl mx-auto">
+    <div class="px-4 py-5 sm:p-6">
+        <div class="mb-6">
+            <a href="{{ url_for('consultas.historia_clinica', id=animal.id) }}" 
+               class="text-blue-600 hover:text-blue-900 mb-4 inline-block">
+                <i class="fas fa-arrow-left mr-2"></i>Volver a Historia Clínica
+            </a>
+            <h2 class="text-2xl font-bold text-gray-900">
+                <i class="fas fa-stethoscope mr-2 text-blue-600"></i>Nueva Consulta
+            </h2>
+            <p class="text-gray-600 mt-1">Animal: <span class="font-semibold">{{ animal.nombre }}</span> - Dueño: {{ animal.nombre_dueno }}</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('consultas.nueva_consulta', id=animal.id) }}" @submit.prevent="enviarConsulta()">
+            <div class="space-y-6">
+                <div>
+                    <label for="fecha_consulta" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-calendar-alt mr-2"></i>Fecha de Consulta *
+                    </label>
+                    <input type="datetime-local" 
+                           id="fecha_consulta" 
+                           name="fecha_consulta" 
+                           x-model="fechaConsulta"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="motivo" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-question-circle mr-2"></i>Motivo de Consulta *
+                    </label>
+                    <textarea id="motivo" 
+                              name="motivo" 
+                              x-model="motivo"
+                              required
+                              rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Describa el motivo de la consulta..."></textarea>
+                </div>
+
+                <div>
+                    <label for="diagnostico" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-clipboard-check mr-2"></i>Diagnóstico
+                    </label>
+                    <textarea id="diagnostico" 
+                              name="diagnostico" 
+                              x-model="diagnostico"
+                              rows="4"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Diagnóstico realizado..."></textarea>
+                </div>
+
+                <div>
+                    <label for="tratamiento" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-pills mr-2"></i>Tratamiento
+                    </label>
+                    <textarea id="tratamiento" 
+                              name="tratamiento" 
+                              x-model="tratamiento"
+                              rows="4"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Tratamiento prescrito..."></textarea>
+                </div>
+
+                <!-- Sección de Medicamentos -->
+                <div class="border-t pt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-pills mr-2 text-green-600"></i>Medicamentos Prescritos
+                        </h3>
+                        <button type="button" 
+                                @click="mostrarBusqueda = true"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>Agregar Medicamento
+                        </button>
+                    </div>
+
+                    <!-- Lista de medicamentos -->
+                    <div class="space-y-2 mb-4">
+                        <template x-for="(item, index) in medicamentos" :key="index">
+                            <div class="bg-gray-50 p-4 rounded-lg flex justify-between items-center">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-gray-900" x-text="item.nombre"></div>
+                                    <div class="text-sm text-gray-600">
+                                        Cantidad: <span x-text="item.cantidad"></span> | 
+                                        Precio: $<span x-text="item.precio.toLocaleString()"></span> | 
+                                        Subtotal: $<span x-text="(item.precio * item.cantidad).toLocaleString()"></span>
+                                    </div>
+                                    <div x-show="item.notas" class="text-xs text-gray-500 mt-1" x-text="'Notas: ' + item.notas"></div>
+                                </div>
+                                <button type="button" 
+                                        @click="eliminarMedicamento(index)"
+                                        class="ml-4 text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </template>
+                        <div x-show="medicamentos.length === 0" class="text-center py-4 text-gray-500">
+                            No hay medicamentos agregados
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-4 rounded-lg" x-show="medicamentos.length > 0">
+                        <div class="text-right">
+                            <span class="text-lg font-semibold text-gray-900">
+                                Total Medicamentos: $<span x-text="calcularTotalMedicamentos().toLocaleString()"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="observaciones" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note mr-2"></i>Observaciones
+                    </label>
+                    <textarea id="observaciones" 
+                              name="observaciones" 
+                              x-model="observaciones"
+                              rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Observaciones adicionales..."></textarea>
+                </div>
+            </div>
+
+            <!-- Campos ocultos para medicamentos -->
+            <template x-for="(item, index) in medicamentos" :key="index">
+                <input type="hidden" :name="'medicamentos[' + index + '][producto_id]'" :value="item.producto_id">
+                <input type="hidden" :name="'medicamentos[' + index + '][cantidad]'" :value="item.cantidad">
+                <input type="hidden" :name="'medicamentos[' + index + '][notas]'" :value="item.notas || ''">
+            </template>
+
+            <div class="mt-6 flex justify-end space-x-4">
+                <a href="{{ url_for('consultas.historia_clinica', id=animal.id) }}" 
+                   class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </a>
+                <button type="submit" 
+                        :disabled="procesando"
+                        :class="procesando ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'"
+                        class="px-6 py-2 text-white rounded-lg transition-colors">
+                    <i class="fas fa-save mr-2"></i>
+                    <span x-text="procesando ? 'Guardando...' : 'Guardar Consulta'"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de búsqueda de productos -->
+<div x-show="mostrarBusqueda" 
+     x-transition
+     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+     @click.away="mostrarBusqueda = false">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-gray-900">
+                <i class="fas fa-search mr-2 text-green-600"></i>Buscar Medicamento
+            </h3>
+            <button @click="mostrarBusqueda = false" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+        
+        <div class="mb-4">
+            <input type="text" 
+                   x-model="busquedaProducto"
+                   @keyup.enter="buscarProducto()"
+                   @input="buscarProducto()"
+                   placeholder="Buscar por código de barras o nombre..."
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+        </div>
+
+        <div class="space-y-2 max-h-96 overflow-y-auto">
+            <template x-for="producto in productosEncontrados" :key="producto.id">
+                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                     @click="agregarMedicamento(producto)">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-semibold text-gray-900" x-text="producto.nombre"></div>
+                            <div class="text-sm text-gray-600">
+                                Código: <span x-text="producto.codigo_barras"></span> | 
+                                Precio: $<span x-text="producto.precio_venta.toLocaleString()"></span> | 
+                                Stock: <span x-text="producto.stock"></span>
+                            </div>
+                        </div>
+                        <i class="fas fa-plus-circle text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </template>
+            <div x-show="productosEncontrados.length === 0 && busquedaProducto.length >= 2" 
+                 class="text-center py-8 text-gray-500">
+                No se encontraron productos
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para cantidad y notas del medicamento -->
+<div x-show="mostrarModalMedicamento" 
+     x-transition
+     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+     @click.away="mostrarModalMedicamento = false">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-gray-900">
+                <i class="fas fa-pills mr-2 text-green-600"></i>Agregar Medicamento
+            </h3>
+            <button @click="mostrarModalMedicamento = false" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Producto</label>
+                <div class="font-semibold text-gray-900" x-text="medicamentoSeleccionado.nombre"></div>
+                <div class="text-sm text-gray-600">Precio: $<span x-text="medicamentoSeleccionado.precio_venta.toLocaleString()"></span></div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad *</label>
+                <input type="number" 
+                       x-model="medicamentoSeleccionado.cantidad"
+                       min="1"
+                       :max="medicamentoSeleccionado.stock"
+                       required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                <p class="text-xs text-gray-500 mt-1">Stock disponible: <span x-text="medicamentoSeleccionado.stock"></span></p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Notas / Instrucciones</label>
+                <textarea x-model="medicamentoSeleccionado.notas"
+                          rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          placeholder="Dosis, frecuencia, etc."></textarea>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end space-x-4">
+            <button type="button"
+                    @click="mostrarModalMedicamento = false"
+                    class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                Cancelar
+            </button>
+            <button type="button"
+                    @click="confirmarMedicamento()"
+                    class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <i class="fas fa-check mr-2"></i>Agregar
+            </button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+function consultaApp() {
+    return {
+        fechaConsulta: '',
+        motivo: '',
+        diagnostico: '',
+        tratamiento: '',
+        observaciones: '',
+        medicamentos: [],
+        mostrarBusqueda: false,
+        busquedaProducto: '',
+        productosEncontrados: [],
+        mostrarModalMedicamento: false,
+        medicamentoSeleccionado: {},
+        procesando: false,
+
+        async buscarProducto() {
+            if (this.busquedaProducto.length < 2) {
+                this.productosEncontrados = [];
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/ventas/api/buscar-producto-nombre?nombre=${encodeURIComponent(this.busquedaProducto)}`);
+                const data = await response.json();
+                this.productosEncontrados = data.filter(p => p.stock > 0);
+            } catch (error) {
+                console.error('Error al buscar producto:', error);
+            }
+        },
+
+        agregarMedicamento(producto) {
+            this.medicamentoSeleccionado = {
+                producto_id: producto.id,
+                nombre: producto.nombre,
+                precio: producto.precio_venta,
+                stock: producto.stock,
+                cantidad: 1,
+                notas: ''
+            };
+            this.mostrarBusqueda = false;
+            this.mostrarModalMedicamento = true;
+            this.busquedaProducto = '';
+            this.productosEncontrados = [];
+        },
+
+        confirmarMedicamento() {
+            if (this.medicamentoSeleccionado.cantidad < 1) {
+                alert('La cantidad debe ser al menos 1');
+                return;
+            }
+            if (this.medicamentoSeleccionado.cantidad > this.medicamentoSeleccionado.stock) {
+                alert('La cantidad no puede ser mayor al stock disponible');
+                return;
+            }
+            this.medicamentos.push({...this.medicamentoSeleccionado});
+            this.mostrarModalMedicamento = false;
+            this.medicamentoSeleccionado = {};
+        },
+
+        eliminarMedicamento(index) {
+            this.medicamentos.splice(index, 1);
+        },
+
+        calcularTotalMedicamentos() {
+            return this.medicamentos.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+        },
+
+        async enviarConsulta() {
+            if (!this.motivo.trim()) {
+                alert('El motivo de la consulta es requerido');
+                return;
+            }
+
+            this.procesando = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('fecha_consulta', this.fechaConsulta || new Date().toISOString().slice(0, 16));
+                formData.append('motivo', this.motivo);
+                formData.append('diagnostico', this.diagnostico);
+                formData.append('tratamiento', this.tratamiento);
+                formData.append('observaciones', this.observaciones);
+                
+                // Agregar medicamentos
+                this.medicamentos.forEach((item, index) => {
+                    formData.append(`medicamentos[${index}][producto_id]`, item.producto_id);
+                    formData.append(`medicamentos[${index}][cantidad]`, item.cantidad);
+                    formData.append(`medicamentos[${index}][notas]`, item.notas || '');
+                });
+
+                const response = await fetch('{{ url_for("consultas.nueva_consulta", id=animal.id) }}', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    window.location.href = '{{ url_for("consultas.historia_clinica", id=animal.id) }}';
+                } else {
+                    const text = await response.text();
+                    alert('Error al guardar la consulta');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al guardar la consulta');
+            } finally {
+                this.procesando = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
