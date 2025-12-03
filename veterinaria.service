@@ -1,0 +1,16 @@
+[Unit]
+Description=Sistema de Gestión Veterinaria
+After=network.target
+
+[Service]
+Type=simple
+User=maricio
+WorkingDirectory=/home/maricio/Documentos/Desarrollos/tiendas
+Environment="PATH=/home/maricio/Documentos/Desarrollos/tiendas/venv/bin"
+ExecStart=/home/maricio/Documentos/Desarrollos/tiendas/venv/bin/python run.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+

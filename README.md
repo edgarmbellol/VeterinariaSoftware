@@ -252,6 +252,49 @@ Instalar driver:
 pip install psycopg2-binary
 ```
 
+## 🚀 Inicio Automático (Opcional)
+
+¿Quieres que el sistema se inicie automáticamente al encender el PC y que el navegador se abra solo?
+
+### Activar Inicio Automático
+
+```bash
+chmod +x configurar_inicio_automatico.sh
+sudo ./configurar_inicio_automatico.sh
+```
+
+**Esto configurará:**
+- ✅ Servicio systemd: El servidor Flask se inicia automáticamente
+- ✅ Auto-reinicio: Si el servidor falla, se reinicia automáticamente
+- ✅ Navegador: Se abre automáticamente en `http://localhost:5000`
+- ✅ Acceso directo: Icono en el escritorio para abrir rápidamente
+
+### Desactivar Inicio Automático
+
+```bash
+chmod +x desactivar_inicio_automatico.sh
+sudo ./desactivar_inicio_automatico.sh
+```
+
+### Comandos Útiles del Servicio
+
+```bash
+# Ver estado del servicio
+sudo systemctl status veterinaria
+
+# Ver logs en tiempo real
+sudo journalctl -u veterinaria -f
+
+# Reiniciar servicio
+sudo systemctl restart veterinaria
+
+# Detener servicio
+sudo systemctl stop veterinaria
+
+# Iniciar servicio
+sudo systemctl start veterinaria
+```
+
 ## 📖 Uso
 
 ### Realizar una Venta

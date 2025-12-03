@@ -357,3 +357,40 @@ echo ""
 echo -e "${GREEN}¡Gracias por usar el Sistema de Gestión Veterinaria! 🏥🐾${NC}"
 echo ""
 
+# ============================================================================
+# PREGUNTAR POR INICIO AUTOMÁTICO
+# ============================================================================
+
+echo -e "${BLUE}🚀 ¿Deseas configurar el INICIO AUTOMÁTICO?${NC}"
+echo ""
+echo "Esto hará que el sistema se inicie automáticamente al encender el PC"
+echo "y que el navegador se abra solo en http://localhost:5000"
+echo ""
+read -p "¿Configurar inicio automático ahora? (s/n): " config_autostart
+
+if [ "$config_autostart" = "s" ]; then
+    echo ""
+    echo -e "${BLUE}Configurando inicio automático...${NC}"
+    
+    if [ -f "configurar_inicio_automatico.sh" ]; then
+        chmod +x configurar_inicio_automatico.sh
+        
+        if sudo ./configurar_inicio_automatico.sh; then
+            echo -e "${GREEN}✓${NC} Inicio automático configurado exitosamente"
+        else
+            echo -e "${YELLOW}⚠${NC} Hubo un problema al configurar el inicio automático"
+            echo "Puedes intentarlo manualmente más tarde:"
+            echo "  sudo ./configurar_inicio_automatico.sh"
+        fi
+    else
+        echo -e "${RED}❌ No se encontró el script configurar_inicio_automatico.sh${NC}"
+    fi
+else
+    echo -e "${YELLOW}↷${NC} Inicio automático omitido"
+    echo ""
+    echo "Puedes configurarlo más tarde ejecutando:"
+    echo "  ${YELLOW}sudo ./configurar_inicio_automatico.sh${NC}"
+fi
+
+echo ""
+
