@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Numeric
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 
 class Usuario(db.Model, UserMixin):
@@ -168,6 +169,10 @@ class Devolucion(db.Model):
     venta = db.relationship('Venta', backref='devoluciones')
     items = db.relationship('ItemDevolucion', backref='devolucion', lazy=True, cascade='all, delete-orphan')
     
+    def calcular_ganancia_perdida_total(self):
+        """Calcula la ganancia total perdida por esta devolución"""
+        return sum(item.calcular_ganancia_perdida() for item in self.items)
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -193,6 +198,13 @@ class ItemDevolucion(db.Model):
     
     item_venta = db.relationship('ItemVenta', backref='devoluciones')
     producto = db.relationship('Producto', backref='items_devolucion')
+    
+    def calcular_ganancia_perdida(self):
+        """Calcula la ganancia perdida por este item devuelto"""
+        if self.producto:
+            precio_compra = float(self.producto.precio_compra)
+            return (float(self.precio_unitario) - precio_compra) * self.cantidad
+        return 0
     
     def to_dict(self):
         return {
@@ -311,4 +323,125 @@ class ItemConsulta(db.Model):
             'subtotal': float(self.producto.precio_venta) * self.cantidad if self.producto else 0,
             'notas': self.notas
         }
+
+
+class Proveedor(db.Model):
+    __tablename__ = 'proveedores'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(200), nullable=False)
+    telefono = db.Column(db.String(20))
+    correo_electronico = db.Column(db.String(200))
+    activo = db.Column(db.Boolean, default=True)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    notas = db.Column(db.Text)
+    
+    compras = db.relationship('Compra', backref='proveedor', lazy=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nombre': self.nombre,
+            'telefono': self.telefono,
+            'correo_electronico': self.correo_electronico,
+            'activo': self.activo,
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            'notas': self.notas,
+            'total_compras': len(self.compras)
+        }
+
+
+class Compra(db.Model):
+    __tablename__ = 'compras'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    numero_compra = db.Column(db.String(20), unique=True, nullable=False)
+    proveedor_id = db.Column(db.Integer, db.ForeignKey('proveedores.id'), nullable=True)
+    total = db.Column(Numeric(10, 2), nullable=False)
+    fecha_recepcion = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    notas = db.Column(db.Text)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    
+    items = db.relationship('ItemCompra', backref='compra', lazy=True, cascade='all, delete-orphan')
+    usuario = db.relationship('Usuario', backref='compras')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'numero_compra': self.numero_compra,
+            'proveedor_id': self.proveedor_id,
+            'proveedor_nombre': self.proveedor.nombre if self.proveedor else 'Sin proveedor',
+            'total': float(self.total),
+            'fecha_recepcion': self.fecha_recepcion.isoformat() if self.fecha_recepcion else None,
+            'notas': self.notas,
+            'usuario_id': self.usuario_id,
+            'usuario_nombre': self.usuario.username if self.usuario else None,
+            'items': [item.to_dict() for item in self.items]
+        }
+
+
+class ItemCompra(db.Model):
+    __tablename__ = 'items_compra'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    compra_id = db.Column(db.Integer, db.ForeignKey('compras.id'), nullable=False)
+    producto_id = db.Column(db.Integer, db.ForeignKey('productos.id'), nullable=False)
+    cantidad = db.Column(db.Integer, nullable=False)
+    precio_unitario = db.Column(Numeric(10, 2), nullable=False)
+    subtotal = db.Column(Numeric(10, 2), nullable=False)
+    
+    producto = db.relationship('Producto', backref='items_compra')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'compra_id': self.compra_id,
+            'producto_id': self.producto_id,
+            'producto_nombre': self.producto.nombre if self.producto else None,
+            'producto_codigo': self.producto.codigo_barras if self.producto else None,
+            'cantidad': self.cantidad,
+            'precio_unitario': float(self.precio_unitario),
+            'subtotal': float(self.subtotal)
+        }
+
+
+class ConfiguracionNegocio(db.Model):
+    __tablename__ = 'configuracion_negocio'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    nombre_negocio = db.Column(db.String(200), default='Veterinaria')
+    nit = db.Column(db.String(50))
+    direccion = db.Column(db.Text)
+    telefono = db.Column(db.String(50))
+    correo = db.Column(db.String(200))
+    logo_path = db.Column(db.String(500))  # Ruta del archivo de logo
+    fecha_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nombre_negocio': self.nombre_negocio,
+            'nit': self.nit,
+            'direccion': self.direccion,
+            'telefono': self.telefono,
+            'correo': self.correo,
+            'logo_path': self.logo_path,
+            'fecha_actualizacion': self.fecha_actualizacion.isoformat() if self.fecha_actualizacion else None
+        }
+    
+    @staticmethod
+    def obtener_configuracion():
+        """Obtiene la configuración del negocio, creándola si no existe"""
+        config = ConfiguracionNegocio.query.first()
+        if not config:
+            config = ConfiguracionNegocio(
+                nombre_negocio='Veterinaria',
+                nit='',
+                direccion='',
+                telefono='',
+                correo=''
+            )
+            db.session.add(config)
+            db.session.commit()
+        return config
 

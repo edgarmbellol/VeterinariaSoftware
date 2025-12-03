@@ -146,17 +146,80 @@
         <div class="mt-6 flex justify-between">
             <div>
                 {% if consulta.items|length > 0 and not consulta.venta %}
-                <a href="{{ url_for('consultas.crear_venta_desde_consulta', consulta_id=consulta.id) }}" 
-                   class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <button onclick="crearCarritoDesdeConsulta({{ consulta.id }}, '{{ consulta.animal.nombre }}')" 
+                   class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
                     <i class="fas fa-shopping-cart mr-2"></i>Crear Venta con Medicamentos
-                </a>
+                </button>
                 {% endif %}
             </div>
             <a href="{{ url_for('consultas.historia_clinica', id=consulta.animal_id) }}" 
-               class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+               class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-semibold">
                 <i class="fas fa-arrow-left mr-2"></i>Volver
             </a>
         </div>
+    </div>
+</div>
+
+<script>
+async function crearCarritoDesdeConsulta(consultaId, nombreAnimal) {
+    try {
+        // Obtener los datos del carrito desde el servidor
+        const response = await fetch(`/consultas/consulta/${consultaId}/crear-carrito`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            alert(data.error || 'Error al crear el carrito');
+            return;
+        }
+
+        // Cargar carritos existentes
+        let carritos = [];
+        try {
+            const stored = localStorage.getItem('carritos_ventas');
+            carritos = stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            carritos = [];
+        }
+
+        // Generar nombre único para el carrito
+        let nombreCarrito = nombreAnimal;
+        let contador = 1;
+        while (carritos.some(c => c.nombre === nombreCarrito)) {
+            nombreCarrito = `${nombreAnimal} ${contador}`;
+            contador++;
+        }
+
+        // Crear nuevo carrito
+        const nuevoId = Date.now().toString();
+        const nuevoCarrito = {
+            id: nuevoId,
+            nombre: nombreCarrito,
+            cliente: nombreAnimal,
+            items: data.items,
+            metodoPago: ''
+        };
+
+        // Guardar el carrito
+        carritos.push(nuevoCarrito);
+        localStorage.setItem('carritos_ventas', JSON.stringify(carritos));
+        
+        // Guardar el ID del carrito a activar en sessionStorage
+        sessionStorage.setItem('carrito_a_activar', nuevoId);
+
+        // Redirigir a ventas
+        window.location.href = '/ventas/';
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al crear el carrito');
+    }
+}
+</script>
     </div>
 </div>
 {% endblock %}

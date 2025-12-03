@@ -319,6 +319,46 @@ def consulta_detalle(id):
     return render_template('consultas/consulta_detalle.html', consulta=consulta)
 
 
+@bp.route('/consulta/<int:consulta_id>/crear-carrito', methods=['POST'])
+@login_required
+def crear_carrito_desde_consulta(consulta_id):
+    """Crear un carrito en ventas desde los medicamentos de una consulta"""
+    consulta = Consulta.query.get_or_404(consulta_id)
+    
+    # Obtener el nombre del animal
+    nombre_animal = consulta.animal.nombre
+    
+    # Preparar los items del carrito
+    items_carrito = []
+    for item_consulta in consulta.items:
+        producto = Producto.query.get(item_consulta.producto_id)
+        if producto and producto.stock >= item_consulta.cantidad:
+            precio_unitario = float(producto.precio_venta)
+            cantidad = item_consulta.cantidad
+            items_carrito.append({
+                'id': producto.id,
+                'nombre': producto.nombre,
+                'codigo_barras': producto.codigo_barras,
+                'precio_unitario': precio_unitario,
+                'precio_venta': precio_unitario,  # Alias para compatibilidad
+                'cantidad': cantidad,
+                'subtotal': precio_unitario * cantidad,
+                'stock': producto.stock
+            })
+    
+    if not items_carrito:
+        flash('No hay medicamentos disponibles para agregar al carrito', 'error')
+        return redirect(url_for('consultas.consulta_detalle', id=consulta_id))
+    
+    # Retornar JSON con los datos del carrito para que el frontend lo cree
+    return jsonify({
+        'success': True,
+        'nombre_animal': nombre_animal,
+        'items': items_carrito,
+        'redirect': url_for('ventas.nueva_venta')
+    })
+
+
 @bp.route('/consulta/<int:consulta_id>/crear-venta', methods=['GET', 'POST'])
 @login_required
 def crear_venta_desde_consulta(consulta_id):

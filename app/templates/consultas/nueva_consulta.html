@@ -4,127 +4,189 @@
 
 {% block content %}
 <div x-data="consultaApp()" x-cloak>
-<div class="bg-white shadow rounded-lg max-w-5xl mx-auto">
-    <div class="px-4 py-5 sm:p-6">
-        <div class="mb-6">
-            <a href="{{ url_for('consultas.historia_clinica', id=animal.id) }}" 
-               class="text-blue-600 hover:text-blue-900 mb-4 inline-block">
-                <i class="fas fa-arrow-left mr-2"></i>Volver a Historia Clínica
-            </a>
-            <h2 class="text-2xl font-bold text-gray-900">
-                <i class="fas fa-stethoscope mr-2 text-blue-600"></i>Nueva Consulta
-            </h2>
-            <p class="text-gray-600 mt-1">Animal: <span class="font-semibold">{{ animal.nombre }}</span> - Dueño: {{ animal.nombre_dueno }}</p>
+    <!-- Encabezado -->
+    <div class="bg-gradient-to-r from-green-600 to-green-800 text-white rounded-lg shadow-lg mb-6 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <a href="{{ url_for('consultas.historia_clinica', id=animal.id) }}" 
+                   class="text-green-100 hover:text-white mb-2 inline-block text-lg">
+                    <i class="fas fa-arrow-left mr-2"></i>Volver a Historia Clínica
+                </a>
+                <h2 class="text-3xl font-bold">
+                    <i class="fas fa-stethoscope mr-3"></i>Nueva Consulta
+                </h2>
+                <p class="text-green-100 mt-2 text-lg">
+                    <i class="fas fa-paw mr-2"></i>Animal: <span class="font-bold">{{ animal.nombre }}</span> | 
+                    <i class="fas fa-user mr-2"></i>Dueño: {{ animal.nombre_dueno }}
+                </p>
+            </div>
         </div>
+    </div>
 
-        <form method="POST" action="{{ url_for('consultas.nueva_consulta', id=animal.id) }}" @submit.prevent="enviarConsulta()">
-            <div class="space-y-6">
-                <div>
-                    <label for="fecha_consulta" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-calendar-alt mr-2"></i>Fecha de Consulta *
-                    </label>
-                    <input type="datetime-local" 
-                           id="fecha_consulta" 
-                           name="fecha_consulta" 
-                           x-model="fechaConsulta"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+    <div class="bg-white shadow-lg rounded-lg max-w-5xl mx-auto">
+        <form method="POST" action="{{ url_for('consultas.nueva_consulta', id=animal.id) }}" @submit.prevent="enviarConsulta()" class="p-8">
+            <!-- Información de la Consulta -->
+            <div class="mb-8">
+                <div class="flex items-center mb-6 pb-4 border-b-2 border-green-200">
+                    <div class="bg-green-100 rounded-full p-3 mr-3">
+                        <i class="fas fa-clipboard text-green-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Información de la Consulta</h3>
                 </div>
 
-                <div>
-                    <label for="motivo" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-question-circle mr-2"></i>Motivo de Consulta *
-                    </label>
-                    <textarea id="motivo" 
-                              name="motivo" 
-                              x-model="motivo"
-                              required
-                              rows="3"
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Describa el motivo de la consulta..."></textarea>
-                </div>
-
-                <div>
-                    <label for="diagnostico" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-clipboard-check mr-2"></i>Diagnóstico
-                    </label>
-                    <textarea id="diagnostico" 
-                              name="diagnostico" 
-                              x-model="diagnostico"
-                              rows="4"
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Diagnóstico realizado..."></textarea>
-                </div>
-
-                <div>
-                    <label for="tratamiento" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-pills mr-2"></i>Tratamiento
-                    </label>
-                    <textarea id="tratamiento" 
-                              name="tratamiento" 
-                              x-model="tratamiento"
-                              rows="4"
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Tratamiento prescrito..."></textarea>
-                </div>
-
-                <!-- Sección de Medicamentos -->
-                <div class="border-t pt-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">
-                            <i class="fas fa-pills mr-2 text-green-600"></i>Medicamentos Prescritos
-                        </h3>
-                        <button type="button" 
-                                @click="mostrarBusqueda = true"
-                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                            <i class="fas fa-plus mr-2"></i>Agregar Medicamento
-                        </button>
+                <div class="space-y-6">
+                    <!-- Fecha -->
+                    <div>
+                        <label for="fecha_consulta" class="block text-lg font-bold text-gray-700 mb-2">
+                            <i class="fas fa-calendar-alt mr-2 text-green-600"></i>Fecha y Hora de Consulta *
+                        </label>
+                        <input type="datetime-local" 
+                               id="fecha_consulta" 
+                               name="fecha_consulta" 
+                               x-model="fechaConsulta"
+                               class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500">
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Fecha y hora en que se realizó la consulta
+                        </p>
                     </div>
 
-                    <!-- Lista de medicamentos -->
-                    <div class="space-y-2 mb-4">
-                        <template x-for="(item, index) in medicamentos" :key="index">
-                            <div class="bg-gray-50 p-4 rounded-lg flex justify-between items-center">
-                                <div class="flex-1">
-                                    <div class="font-semibold text-gray-900" x-text="item.nombre"></div>
-                                    <div class="text-sm text-gray-600">
-                                        Cantidad: <span x-text="item.cantidad"></span> | 
-                                        Precio: $<span x-text="item.precio.toLocaleString()"></span> | 
-                                        Subtotal: $<span x-text="(item.precio * item.cantidad).toLocaleString()"></span>
-                                    </div>
-                                    <div x-show="item.notas" class="text-xs text-gray-500 mt-1" x-text="'Notas: ' + item.notas"></div>
+                    <!-- Motivo -->
+                    <div>
+                        <label for="motivo" class="block text-lg font-bold text-gray-700 mb-2">
+                            <i class="fas fa-question-circle mr-2 text-green-600"></i>Motivo de Consulta *
+                        </label>
+                        <textarea id="motivo" 
+                                  name="motivo" 
+                                  x-model="motivo"
+                                  required
+                                  rows="4"
+                                  class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500"
+                                  placeholder="Describa el motivo de la consulta, síntomas, comportamiento, etc."></textarea>
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Razón por la cual el animal fue traído a consulta
+                        </p>
+                    </div>
+
+                    <!-- Diagnóstico -->
+                    <div>
+                        <label for="diagnostico" class="block text-lg font-bold text-gray-700 mb-2">
+                            <i class="fas fa-clipboard-check mr-2 text-red-600"></i>Diagnóstico
+                        </label>
+                        <textarea id="diagnostico" 
+                                  name="diagnostico" 
+                                  x-model="diagnostico"
+                                  rows="5"
+                                  class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-red-500 focus:border-red-500"
+                                  placeholder="Escriba el diagnóstico realizado..."></textarea>
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Diagnóstico médico realizado (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Tratamiento -->
+                    <div>
+                        <label for="tratamiento" class="block text-lg font-bold text-gray-700 mb-2">
+                            <i class="fas fa-pills mr-2 text-blue-600"></i>Tratamiento Prescrito
+                        </label>
+                        <textarea id="tratamiento" 
+                                  name="tratamiento" 
+                                  x-model="tratamiento"
+                                  rows="5"
+                                  class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Describa el tratamiento prescrito, dosis, frecuencia, etc."></textarea>
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Tratamiento y medicamentos prescritos (opcional)
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medicamentos Prescritos -->
+            <div class="mb-8 border-t-2 pt-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center">
+                        <div class="bg-blue-100 rounded-full p-3 mr-3">
+                            <i class="fas fa-pills text-blue-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">Medicamentos Prescritos</h3>
+                    </div>
+                    <button type="button" 
+                            @click="mostrarBusqueda = true"
+                            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-lg shadow-lg">
+                        <i class="fas fa-plus-circle mr-2"></i>Agregar Medicamento
+                    </button>
+                </div>
+
+                <!-- Lista de medicamentos mejorada -->
+                <div class="space-y-3 mb-4">
+                    <template x-for="(item, index) in medicamentos" :key="index">
+                        <div class="bg-gradient-to-r from-blue-50 to-green-50 p-5 rounded-lg border-2 border-blue-200 flex justify-between items-center shadow-md">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-pills text-blue-600 mr-2"></i>
+                                    <div class="text-xl font-bold text-gray-900" x-text="item.nombre"></div>
                                 </div>
-                                <button type="button" 
-                                        @click="eliminarMedicamento(index)"
-                                        class="ml-4 text-red-600 hover:text-red-900">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="text-base text-gray-700 space-y-1">
+                                    <div>
+                                        <i class="fas fa-box mr-2"></i>
+                                        <span class="font-semibold">Cantidad:</span> 
+                                        <span class="px-3 py-1 bg-blue-100 rounded-full font-bold" x-text="item.cantidad"></span>
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-dollar-sign mr-2"></i>
+                                        <span class="font-semibold">Precio unitario:</span> 
+                                        $<span x-text="item.precio.toLocaleString()"></span> | 
+                                        <span class="font-semibold">Subtotal:</span> 
+                                        $<span class="text-green-700 font-bold" x-text="(item.precio * item.cantidad).toLocaleString()"></span>
+                                    </div>
+                                    <div x-show="item.notas" class="mt-2 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
+                                        <i class="fas fa-sticky-note mr-2 text-yellow-600"></i>
+                                        <span class="text-sm font-semibold">Notas:</span>
+                                        <span class="text-sm" x-text="item.notas"></span>
+                                    </div>
+                                </div>
                             </div>
-                        </template>
-                        <div x-show="medicamentos.length === 0" class="text-center py-4 text-gray-500">
-                            No hay medicamentos agregados
+                            <button type="button" 
+                                    @click="eliminarMedicamento(index)"
+                                    class="ml-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                                <i class="fas fa-trash mr-1"></i>Eliminar
+                            </button>
                         </div>
-                    </div>
-
-                    <div class="bg-blue-50 p-4 rounded-lg" x-show="medicamentos.length > 0">
-                        <div class="text-right">
-                            <span class="text-lg font-semibold text-gray-900">
-                                Total Medicamentos: $<span x-text="calcularTotalMedicamentos().toLocaleString()"></span>
-                            </span>
-                        </div>
+                    </template>
+                    <div x-show="medicamentos.length === 0" class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <i class="fas fa-pills text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-lg text-gray-500 font-semibold">No hay medicamentos agregados</p>
+                        <p class="text-sm text-gray-400 mt-1">Haz clic en "Agregar Medicamento" para comenzar</p>
                     </div>
                 </div>
 
-                <div>
-                    <label for="observaciones" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-sticky-note mr-2"></i>Observaciones
-                    </label>
-                    <textarea id="observaciones" 
-                              name="observaciones" 
-                              x-model="observaciones"
-                              rows="3"
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Observaciones adicionales..."></textarea>
+                <!-- Total -->
+                <div class="bg-gradient-to-r from-green-100 to-blue-100 p-5 rounded-lg border-2 border-green-300" x-show="medicamentos.length > 0">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xl font-bold text-gray-700">
+                            <i class="fas fa-calculator mr-2"></i>Total de Medicamentos:
+                        </span>
+                        <span class="text-3xl font-bold text-green-700">
+                            $<span x-text="calcularTotalMedicamentos().toLocaleString()"></span>
+                        </span>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="mb-8">
+                <div class="flex items-center mb-4">
+                    <div class="bg-yellow-100 rounded-full p-3 mr-3">
+                        <i class="fas fa-sticky-note text-yellow-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Observaciones Adicionales</h3>
+                </div>
+                <textarea id="observaciones" 
+                          name="observaciones" 
+                          x-model="observaciones"
+                          rows="4"
+                          class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-yellow-500 focus:border-yellow-500"
+                          placeholder="Observaciones adicionales, recomendaciones, próximos pasos, etc."></textarea>
             </div>
 
             <!-- Campos ocultos para medicamentos -->
@@ -134,128 +196,144 @@
                 <input type="hidden" :name="'medicamentos[' + index + '][notas]'" :value="item.notas || ''">
             </template>
 
-            <div class="mt-6 flex justify-end space-x-4">
+            <!-- Botones de acción -->
+            <div class="flex justify-end gap-4 pt-6 border-t-2 border-gray-200">
                 <a href="{{ url_for('consultas.historia_clinica', id=animal.id) }}" 
-                   class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                   class="px-8 py-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-bold text-lg">
                     <i class="fas fa-times mr-2"></i>Cancelar
                 </a>
                 <button type="submit" 
                         :disabled="procesando"
-                        :class="procesando ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'"
-                        class="px-6 py-2 text-white rounded-lg transition-colors">
+                        :class="procesando ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+                        class="px-8 py-4 text-white rounded-lg transition-colors font-bold text-lg shadow-lg">
                     <i class="fas fa-save mr-2"></i>
                     <span x-text="procesando ? 'Guardando...' : 'Guardar Consulta'"></span>
                 </button>
             </div>
         </form>
     </div>
-</div>
 
-<!-- Modal de búsqueda de productos -->
-<div x-show="mostrarBusqueda" 
-     x-transition
-     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-     @click.away="mostrarBusqueda = false">
-    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold text-gray-900">
-                <i class="fas fa-search mr-2 text-green-600"></i>Buscar Medicamento
-            </h3>
-            <button @click="mostrarBusqueda = false" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times text-2xl"></i>
-            </button>
-        </div>
-        
-        <div class="mb-4">
-            <input type="text" 
-                   x-model="busquedaProducto"
-                   @keyup.enter="buscarProducto()"
-                   @input="buscarProducto()"
-                   placeholder="Buscar por código de barras o nombre..."
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-        </div>
+    <!-- Modal de búsqueda de productos mejorado -->
+    <div x-show="mostrarBusqueda" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarBusqueda = false">
+        <div class="bg-white rounded-xl p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-search mr-2 text-green-600"></i>Buscar Medicamento
+                </h3>
+                <button @click="mostrarBusqueda = false" class="text-gray-500 hover:text-gray-700 text-3xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <input type="text" 
+                       x-model="busquedaProducto"
+                       @keyup.enter="buscarProducto()"
+                       @input="buscarProducto()"
+                       placeholder="Escribe el código de barras o nombre del medicamento..."
+                       class="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500">
+                <p class="mt-2 text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>Busca por código de barras o nombre del producto
+                </p>
+            </div>
 
-        <div class="space-y-2 max-h-96 overflow-y-auto">
-            <template x-for="producto in productosEncontrados" :key="producto.id">
-                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                     @click="agregarMedicamento(producto)">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <div class="font-semibold text-gray-900" x-text="producto.nombre"></div>
-                            <div class="text-sm text-gray-600">
-                                Código: <span x-text="producto.codigo_barras"></span> | 
-                                Precio: $<span x-text="producto.precio_venta.toLocaleString()"></span> | 
-                                Stock: <span x-text="producto.stock"></span>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+                <template x-for="producto in productosEncontrados" :key="producto.id">
+                    <div class="border-2 border-gray-200 rounded-lg p-5 hover:bg-green-50 hover:border-green-300 cursor-pointer transition-all"
+                         @click="agregarMedicamento(producto)">
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1">
+                                <div class="text-xl font-bold text-gray-900 mb-2" x-text="producto.nombre"></div>
+                                <div class="text-base text-gray-600 space-y-1">
+                                    <div><i class="fas fa-barcode mr-2"></i>Código: <span class="font-mono font-semibold" x-text="producto.codigo_barras"></span></div>
+                                    <div><i class="fas fa-dollar-sign mr-2"></i>Precio: $<span class="font-bold text-green-600" x-text="producto.precio_venta.toLocaleString()"></span></div>
+                                    <div><i class="fas fa-warehouse mr-2"></i>Stock disponible: <span class="font-bold" x-text="producto.stock"></span></div>
+                                </div>
                             </div>
+                            <i class="fas fa-plus-circle text-green-600 text-3xl ml-4"></i>
                         </div>
-                        <i class="fas fa-plus-circle text-green-600 text-xl"></i>
+                    </div>
+                </template>
+                <div x-show="productosEncontrados.length === 0 && busquedaProducto.length >= 2" 
+                     class="text-center py-12 text-gray-500">
+                    <i class="fas fa-search text-4xl mb-3"></i>
+                    <p class="text-lg font-semibold">No se encontraron productos</p>
+                    <p class="text-sm">Intenta con otro término de búsqueda</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para cantidad y notas del medicamento mejorado -->
+    <div x-show="mostrarModalMedicamento" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarModalMedicamento = false">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-pills mr-2 text-green-600"></i>Agregar Medicamento
+                </h3>
+                <button @click="mostrarModalMedicamento = false" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-5">
+                <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">Producto</label>
+                    <div class="text-lg font-bold text-gray-900" x-text="medicamentoSeleccionado.nombre"></div>
+                    <div class="text-base text-gray-600 mt-1">
+                        Precio: $<span class="font-bold text-green-600" x-text="medicamentoSeleccionado.precio_venta?.toLocaleString()"></span>
                     </div>
                 </div>
-            </template>
-            <div x-show="productosEncontrados.length === 0 && busquedaProducto.length >= 2" 
-                 class="text-center py-8 text-gray-500">
-                No se encontraron productos
+                
+                <div>
+                    <label class="block text-lg font-bold text-gray-700 mb-2">
+                        <i class="fas fa-box mr-2"></i>Cantidad *
+                    </label>
+                    <input type="number" 
+                           x-model="medicamentoSeleccionado.cantidad"
+                           min="1"
+                           :max="medicamentoSeleccionado.stock"
+                           required
+                           class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500">
+                    <p class="text-sm text-gray-500 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>Stock disponible: <span class="font-bold" x-text="medicamentoSeleccionado.stock"></span> unidades
+                    </p>
+                </div>
+                
+                <div>
+                    <label class="block text-lg font-bold text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note mr-2"></i>Notas / Instrucciones
+                    </label>
+                    <textarea x-model="medicamentoSeleccionado.notas"
+                              rows="4"
+                              class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500"
+                              placeholder="Dosis, frecuencia de administración, etc."></textarea>
+                    <p class="text-sm text-gray-500 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>Instrucciones de uso para el dueño (opcional)
+                    </p>
+                </div>
+            </div>
+            
+            <div class="mt-8 flex justify-end gap-4">
+                <button type="button"
+                        @click="mostrarModalMedicamento = false"
+                        class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold">
+                    Cancelar
+                </button>
+                <button type="button"
+                        @click="confirmarMedicamento()"
+                        class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+                    <i class="fas fa-check mr-2"></i>Agregar
+                </button>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Modal para cantidad y notas del medicamento -->
-<div x-show="mostrarModalMedicamento" 
-     x-transition
-     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-     @click.away="mostrarModalMedicamento = false">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold text-gray-900">
-                <i class="fas fa-pills mr-2 text-green-600"></i>Agregar Medicamento
-            </h3>
-            <button @click="mostrarModalMedicamento = false" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times text-2xl"></i>
-            </button>
-        </div>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Producto</label>
-                <div class="font-semibold text-gray-900" x-text="medicamentoSeleccionado.nombre"></div>
-                <div class="text-sm text-gray-600">Precio: $<span x-text="medicamentoSeleccionado.precio_venta.toLocaleString()"></span></div>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad *</label>
-                <input type="number" 
-                       x-model="medicamentoSeleccionado.cantidad"
-                       min="1"
-                       :max="medicamentoSeleccionado.stock"
-                       required
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                <p class="text-xs text-gray-500 mt-1">Stock disponible: <span x-text="medicamentoSeleccionado.stock"></span></p>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Notas / Instrucciones</label>
-                <textarea x-model="medicamentoSeleccionado.notas"
-                          rows="3"
-                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          placeholder="Dosis, frecuencia, etc."></textarea>
-            </div>
-        </div>
-        
-        <div class="mt-6 flex justify-end space-x-4">
-            <button type="button"
-                    @click="mostrarModalMedicamento = false"
-                    class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
-                Cancelar
-            </button>
-            <button type="button"
-                    @click="confirmarMedicamento()"
-                    class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                <i class="fas fa-check mr-2"></i>Agregar
-            </button>
-        </div>
-    </div>
-</div>
 </div>
 
 <script>
@@ -319,7 +397,9 @@ function consultaApp() {
         },
 
         eliminarMedicamento(index) {
-            this.medicamentos.splice(index, 1);
+            if (confirm('¿Estás seguro de eliminar este medicamento?')) {
+                this.medicamentos.splice(index, 1);
+            }
         },
 
         calcularTotalMedicamentos() {
@@ -342,7 +422,6 @@ function consultaApp() {
                 formData.append('tratamiento', this.tratamiento);
                 formData.append('observaciones', this.observaciones);
                 
-                // Agregar medicamentos
                 this.medicamentos.forEach((item, index) => {
                     formData.append(`medicamentos[${index}][producto_id]`, item.producto_id);
                     formData.append(`medicamentos[${index}][cantidad]`, item.cantidad);
@@ -357,7 +436,6 @@ function consultaApp() {
                 if (response.ok) {
                     window.location.href = '{{ url_for("consultas.historia_clinica", id=animal.id) }}';
                 } else {
-                    const text = await response.text();
                     alert('Error al guardar la consulta');
                 }
             } catch (error) {

@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Asistente IA - Veterinaria{% endblock %}
+
+{% block content %}
+<div x-data="asistenteIAApp()" x-cloak>
+    <div class="max-w-7xl mx-auto">
+        <!-- Encabezado -->
+        <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg shadow-lg mb-6 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold mb-2">
+                        <i class="fas fa-robot mr-3"></i>Asistente Veterinario IA
+                    </h2>
+                    <p class="text-purple-100">Experto en productos veterinarios y consultas médicas</p>
+                </div>
+                <div class="text-right">
+                    <div class="bg-white bg-opacity-20 rounded-lg px-4 py-2">
+                        <div class="text-sm text-purple-100">Conversaciones</div>
+                        <div class="text-2xl font-bold" x-text="mensajes.length / 2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de chat principal -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden" style="height: calc(100vh - 280px); min-height: 600px;">
+            <div class="flex flex-col h-full">
+                <!-- Área de mensajes -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50" id="chat-container">
+                    <!-- Mensaje de bienvenida -->
+                    <template x-if="mensajes.length === 0">
+                        <div class="text-center py-12">
+                            <div class="inline-block bg-purple-100 rounded-full p-8 mb-6">
+                                <i class="fas fa-robot text-6xl text-purple-600"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3">¡Hola! Soy tu Asistente Veterinario</h3>
+                            <p class="text-gray-600 mb-6 max-w-2xl mx-auto">
+                                Puedo ayudarte con información sobre productos veterinarios, dosis de medicamentos, 
+                                síntomas, tratamientos y consejos profesionales para el cuidado de animales.
+                            </p>
+                            
+                            <!-- Sugerencias de preguntas -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mt-8">
+                                <button @click="enviarSugerencia('¿Qué desparasitante recomiendas para un gato adulto?')"
+                                        class="bg-white border-2 border-purple-200 rounded-lg p-4 text-left hover:border-purple-400 hover:shadow-md transition-all">
+                                    <i class="fas fa-pills text-purple-600 mr-2"></i>
+                                    <span class="text-gray-700">¿Qué desparasitante recomiendas para un gato adulto?</span>
+                                </button>
+                                
+                                <button @click="enviarSugerencia('Mi perro tiene 15 kg, ¿qué dosis de antiparasitario necesita?')"
+                                        class="bg-white border-2 border-purple-200 rounded-lg p-4 text-left hover:border-purple-400 hover:shadow-md transition-all">
+                                    <i class="fas fa-weight text-purple-600 mr-2"></i>
+                                    <span class="text-gray-700">Mi perro tiene 15 kg, ¿qué dosis de antiparasitario necesita?</span>
+                                </button>
+                                
+                                <button @click="enviarSugerencia('¿Qué productos tienes disponibles para el cuidado dental?')"
+                                        class="bg-white border-2 border-purple-200 rounded-lg p-4 text-left hover:border-purple-400 hover:shadow-md transition-all">
+                                    <i class="fas fa-tooth text-purple-600 mr-2"></i>
+                                    <span class="text-gray-700">¿Qué productos tienes disponibles para el cuidado dental?</span>
+                                </button>
+                                
+                                <button @click="enviarSugerencia('Mi mascota tiene pulgas, ¿qué tratamiento recomiendas?')"
+                                        class="bg-white border-2 border-purple-200 rounded-lg p-4 text-left hover:border-purple-400 hover:shadow-md transition-all">
+                                    <i class="fas fa-bug text-purple-600 mr-2"></i>
+                                    <span class="text-gray-700">Mi mascota tiene pulgas, ¿qué tratamiento recomiendas?</span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Mensajes del chat -->
+                    <template x-for="(mensaje, index) in mensajes" :key="index">
+                        <div :class="mensaje.tipo === 'usuario' ? 'flex justify-end' : 'flex justify-start'">
+                            <div :class="mensaje.tipo === 'usuario' ? 'flex-row-reverse' : 'flex-row'"
+                                 class="flex items-start gap-3 max-w-4xl">
+                                <!-- Avatar -->
+                                <div :class="mensaje.tipo === 'usuario' ? 'bg-blue-600' : 'bg-purple-600'"
+                                     class="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0">
+                                    <i :class="mensaje.tipo === 'usuario' ? 'fas fa-user' : 'fas fa-robot'"></i>
+                                </div>
+                                
+                                <!-- Contenido del mensaje -->
+                                <div :class="mensaje.tipo === 'usuario' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200'"
+                                     class="rounded-lg px-5 py-4 shadow-sm">
+                                    <div class="prose prose-sm max-w-none" x-html="formatearMensaje(mensaje.texto)"></div>
+                                    <div :class="mensaje.tipo === 'usuario' ? 'text-blue-100' : 'text-gray-400'"
+                                         class="text-xs mt-2" x-text="mensaje.hora"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Indicador de escritura -->
+                    <div x-show="procesando" class="flex justify-start">
+                        <div class="flex items-start gap-3 max-w-4xl">
+                            <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white flex-shrink-0">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0ms;"></div>
+                                    <div class="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 150ms;"></div>
+                                    <div class="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 300ms;"></div>
+                                    <span class="text-sm text-gray-500 ml-2">Pensando...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área de entrada de mensaje -->
+                <div class="border-t border-gray-200 bg-white p-4">
+                    <div class="max-w-4xl mx-auto">
+                        <form @submit.prevent="enviarMensaje()" class="flex gap-3">
+                            <div class="flex-1">
+                                <textarea x-model="mensajeActual"
+                                          @keydown.enter.prevent="if (!$event.shiftKey) enviarMensaje()"
+                                          :disabled="procesando"
+                                          placeholder="Escribe tu pregunta aquí... (Shift+Enter para nueva línea)"
+                                          rows="2"
+                                          class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-purple-500 focus:border-purple-500 resize-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"></textarea>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button type="submit"
+                                        :disabled="!mensajeActual.trim() || procesando"
+                                        class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md hover:shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center">
+                                    <i class="fas fa-paper-plane mr-2"></i>
+                                    <span>Enviar</span>
+                                </button>
+                                <button type="button"
+                                        @click="limpiarChat()"
+                                        :disabled="mensajes.length === 0"
+                                        class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all shadow-md hover:shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center">
+                                    <i class="fas fa-trash mr-2"></i>
+                                    <span>Limpiar</span>
+                                </button>
+                            </div>
+                        </form>
+                        <p class="text-xs text-gray-500 mt-2 text-center">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            La información proporcionada es orientativa. Siempre consulta con un veterinario profesional.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function asistenteIAApp() {
+    return {
+        mensajes: [],
+        mensajeActual: '',
+        procesando: false,
+
+        async enviarMensaje() {
+            const mensaje = this.mensajeActual.trim();
+            if (!mensaje || this.procesando) return;
+
+            // Agregar mensaje del usuario
+            this.mensajes.push({
+                tipo: 'usuario',
+                texto: mensaje,
+                hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+            });
+
+            this.mensajeActual = '';
+            this.procesando = true;
+            this.scrollToBottom();
+
+            try {
+                const response = await fetch('/asistente-ia/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        mensaje: mensaje,
+                        historial: this.mensajes  // Enviar historial para mantener contexto
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al procesar la consulta');
+                }
+
+                // Agregar respuesta de la IA
+                this.mensajes.push({
+                    tipo: 'asistente',
+                    texto: data.respuesta,
+                    hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                });
+
+                this.scrollToBottom();
+
+            } catch (error) {
+                console.error('Error:', error);
+                this.mensajes.push({
+                    tipo: 'asistente',
+                    texto: '❌ Lo siento, ocurrió un error al procesar tu consulta. Por favor intenta de nuevo.',
+                    hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                });
+            } finally {
+                this.procesando = false;
+                this.scrollToBottom();
+            }
+        },
+
+        enviarSugerencia(texto) {
+            this.mensajeActual = texto;
+            this.enviarMensaje();
+        },
+
+        limpiarChat() {
+            if (confirm('¿Estás seguro de que deseas limpiar el chat?')) {
+                this.mensajes = [];
+                this.mensajeActual = '';
+            }
+        },
+
+        formatearMensaje(texto) {
+            // Convertir markdown básico a HTML
+            let html = texto
+                // Negrita
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Cursiva
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Listas con guiones
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                // Saltos de línea
+                .replace(/\n/g, '<br>');
+            
+            // Envolver listas en <ul>
+            if (html.includes('<li>')) {
+                html = html.replace(/(<li>.*?<\/li>)/gs, '<ul class="list-disc list-inside my-2">$1</ul>');
+            }
+            
+            return html;
+        },
+
+        scrollToBottom() {
+            this.$nextTick(() => {
+                const container = document.getElementById('chat-container');
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+        }
+    }
+}
+</script>
+
+<style>
+[x-cloak] { display: none !important; }
+
+.prose {
+    color: inherit;
+}
+
+.prose strong {
+    font-weight: 700;
+}
+
+.prose em {
+    font-style: italic;
+}
+
+.prose ul {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose li {
+    margin-left: 1rem;
+}
+</style>
+{% endblock %}
+

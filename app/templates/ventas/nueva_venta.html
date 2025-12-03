@@ -10,30 +10,86 @@
                 <h2 class="text-2xl font-bold text-gray-900">
                     <i class="fas fa-shopping-cart mr-2 text-blue-600"></i>Nueva Venta
                 </h2>
-                <div class="flex items-center space-x-2">
-                    <button @click="mostrarCarritos = true" 
-                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                        <i class="fas fa-ticket-alt mr-2"></i>
-                        <span x-text="'Carritos (' + (carritosGuardados.length + 1) + ')'"></span>
-                    </button>
-                </div>
+                <a href="{{ url_for('compras.nueva') }}" 
+                   class="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold">
+                    <i class="fas fa-truck mr-2"></i>Recibir Pedido
+                </a>
             </div>
             
-            <!-- Indicador de carrito activo -->
-            <div x-show="carritoActual.nombre" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-sm font-medium text-blue-900">
-                            <i class="fas fa-tag mr-2"></i>Carrito activo: <span x-text="carritoActual.nombre" class="font-semibold"></span>
-                        </span>
-                        <span x-show="carritoActual.cliente" class="text-xs text-blue-700 ml-3">
-                            Cliente: <span x-text="carritoActual.cliente"></span>
-                        </span>
-                    </div>
-                    <button @click="editarCarritoActual()" 
-                            class="text-sm text-blue-600 hover:text-blue-800">
-                        <i class="fas fa-edit mr-1"></i>Editar
+            <!-- Sección de Carritos - Visible siempre -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-ticket-alt mr-2 text-indigo-600"></i>Carritos
+                    </h3>
+                    <button @click="crearNuevoCarrito()" 
+                            class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-plus mr-1"></i>Nuevo
                     </button>
+                </div>
+                
+                <!-- Grid de carritos como tickets -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    <!-- Carrito activo -->
+                    <div @click="cambiarACarrito(carritoActual)" 
+                         :class="carritoActual.id ? 'border-2 border-blue-500 bg-blue-50' : 'border border-gray-300 bg-white'"
+                         class="p-3 rounded-lg cursor-pointer hover:shadow-md transition-all relative">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1 pr-2">
+                                <div class="font-semibold text-sm text-gray-900 truncate" 
+                                     x-text="carritoActual.nombre || 'Carrito Actual'"></div>
+                                <div x-show="carritoActual.cliente" 
+                                     class="text-xs text-gray-600 mt-1 truncate" 
+                                     x-text="'Cliente: ' + carritoActual.cliente"></div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span x-show="carritoActual.id" 
+                                      class="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full whitespace-nowrap">Activo</span>
+                                <button @click.stop="editarCarritoActual()" 
+                                        class="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-gray-600">
+                            <span x-text="carritoActual.items.length + ' productos'"></span>
+                            <span class="font-semibold text-gray-900" 
+                                  x-text="formatMoney(calcularTotalCarrito(carritoActual))"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Carritos guardados -->
+                    <template x-for="carrito in carritosGuardados" :key="carrito.id">
+                        <div @click="cambiarACarrito(carrito)" 
+                             class="p-3 border border-gray-300 rounded-lg cursor-pointer hover:shadow-md hover:border-indigo-400 transition-all bg-white relative">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-sm text-gray-900 truncate" 
+                                         x-text="carrito.nombre"></div>
+                                    <div x-show="carrito.cliente" 
+                                         class="text-xs text-gray-600 mt-1 truncate" 
+                                         x-text="'Cliente: ' + carrito.cliente"></div>
+                                </div>
+                                <div class="flex space-x-1">
+                                    <button @click.stop="abrirModalEditarCarrito(carrito)" 
+                                            class="text-blue-400 hover:text-blue-600"
+                                            title="Editar nombre">
+                                        <i class="fas fa-edit text-xs"></i>
+                                    </button>
+                                    <button @click.stop="eliminarCarrito(carrito.id)" 
+                                            class="text-red-400 hover:text-red-600"
+                                            title="Eliminar carrito">
+                                        <i class="fas fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-gray-600">
+                                <span x-text="carrito.items.length + ' productos'"></span>
+                                <span class="font-semibold text-gray-900" 
+                                      x-text="formatMoney(calcularTotalCarrito(carrito))"></span>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
 
@@ -446,99 +502,85 @@
         </div>
     </div>
 
-    <!-- Modal de gestión de carritos -->
-    <div x-show="mostrarCarritos" 
+
+    <!-- Modal de editar carrito -->
+    <div x-show="mostrarModalEditarCarrito" 
          x-transition
          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-         @click.away="mostrarCarritos = false">
-        <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+         @click.away="cerrarModalEditarCarrito()">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold text-gray-900">
-                    <i class="fas fa-ticket-alt mr-2 text-indigo-600"></i>Gestión de Carritos
+                    <i class="fas fa-edit mr-2 text-blue-600"></i>Editar Carrito
                 </h3>
-                <div class="flex space-x-2">
-                    <button @click="crearNuevoCarrito(); mostrarCarritos = false;" 
-                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                        <i class="fas fa-plus mr-2"></i>Nuevo Carrito
-                    </button>
-                    <button @click="mostrarCarritos = false" 
-                            class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-2xl"></i>
-                    </button>
+                <button @click="cerrarModalEditarCarrito()" 
+                        class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Nombre del carrito
+                    </label>
+                    <input 
+                        type="text" 
+                        x-model="carritoEditando.nombre"
+                        @keyup.enter="guardarEdicionCarrito()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Nombre del carrito"
+                        autofocus
+                    >
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Cliente (opcional)
+                    </label>
+                    <input 
+                        type="text" 
+                        x-model="carritoEditando.cliente"
+                        @keyup.enter="guardarEdicionCarrito()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Nombre del cliente"
+                    >
                 </div>
             </div>
             
-            <div class="flex-1 overflow-y-auto">
-                <!-- Carrito Activo -->
-                <div class="mb-4 p-4 bg-blue-50 border-2 border-blue-500 rounded-lg">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="flex items-center mb-2">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white mr-2">
-                                    ACTIVO
-                                </span>
-                                <span class="font-semibold text-gray-900" x-text="carritoActual.nombre"></span>
-                            </div>
-                            <div class="text-sm text-gray-600 mb-2">
-                                <span x-show="carritoActual.cliente" x-text="'Cliente: ' + carritoActual.cliente"></span>
-                                <span x-show="!carritoActual.cliente" class="text-gray-400">Sin cliente asignado</span>
-                            </div>
-                            <div class="text-sm text-gray-600">
-                                <span x-text="carritoActual.items.length + ' productos'"></span>
-                                <span class="mx-2">•</span>
-                                <span class="font-semibold text-blue-700" x-text="'Total: ' + formatMoney(calcularTotal())"></span>
-                            </div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button @click="editarCarritoActual()" 
-                                    class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button @click="cerrarModalEditarCarrito()" 
+                        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    Cancelar
+                </button>
+                <button @click="guardarEdicionCarrito()" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-save mr-2"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
 
-                <!-- Carritos Guardados -->
-                <div class="mb-4">
-                    <h4 class="text-lg font-semibold text-gray-900 mb-3">
-                        <i class="fas fa-list mr-2"></i>Carritos Guardados
-                    </h4>
-                    <div x-show="carritosGuardados.length === 0" class="text-center py-8 text-gray-500">
-                        <i class="fas fa-inbox text-4xl mb-2 block"></i>
-                        No hay carritos guardados
-                    </div>
-                    <div class="space-y-2">
-                        <template x-for="carrito in carritosGuardados" :key="carrito.id">
-                            <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex-1">
-                                        <div class="font-semibold text-gray-900 mb-1" x-text="carrito.nombre"></div>
-                                        <div class="text-sm text-gray-600 mb-2">
-                                            <span x-show="carrito.cliente" x-text="'Cliente: ' + carrito.cliente"></span>
-                                            <span x-show="!carrito.cliente" class="text-gray-400">Sin cliente asignado</span>
-                                        </div>
-                                        <div class="text-sm text-gray-600">
-                                            <span x-text="carrito.items.length + ' productos'"></span>
-                                            <span class="mx-2">•</span>
-                                            <span class="font-semibold text-gray-700" 
-                                                  x-text="'Total: ' + formatMoney(carrito.items.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0))"></span>
-                                        </div>
-                                    </div>
-                                    <div class="flex space-x-2">
-                                        <button @click="cambiarACarrito(carrito)" 
-                                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
-                                            <i class="fas fa-arrow-right mr-1"></i>Cargar
-                                        </button>
-                                        <button @click="eliminarCarrito(carrito.id)" 
-                                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
+    <!-- Modal de límite de carritos -->
+    <div x-show="mostrarModalLimiteCarritos" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarModalLimiteCarritos = false">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 mb-4">
+                    <i class="fas fa-exclamation-triangle text-orange-600 text-2xl"></i>
                 </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">
+                    Límite de Carritos Alcanzado
+                </h3>
+                <p class="text-gray-600 mb-6">
+                    Se ha alcanzado el número máximo de carritos (12). Por favor, elimina un carrito existente o finaliza una venta antes de crear uno nuevo.
+                </p>
+                <button @click="mostrarModalLimiteCarritos = false" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Entendido
+                </button>
             </div>
         </div>
     </div>
@@ -554,10 +596,14 @@
                 <h3 class="text-2xl font-bold text-gray-900 mb-2">¡Venta Exitosa!</h3>
                 <p class="text-gray-600 mb-4" x-text="'Número de venta: ' + numeroVenta"></p>
                 <p class="text-xl font-semibold text-blue-600 mb-6" x-text="'Total: ' + formatMoney(totalVenta)"></p>
-                <div class="flex space-x-3 justify-center">
+                <div class="flex flex-wrap gap-3 justify-center">
                     <button @click="generarPDF()" 
                             class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                         <i class="fas fa-file-pdf mr-2"></i>Generar PDF
+                    </button>
+                    <button @click="imprimirTicket()" 
+                            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-receipt mr-2"></i>Imprimir Ticket
                     </button>
                     <button @click="nuevaVenta()" 
                             class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -601,9 +647,12 @@
         mensajeAyuda: '',
         procesandoAyuda: false,
         carritosGuardados: [],
-        mostrarCarritos: false,
         carritoActual: { id: null, nombre: '', cliente: '', items: [], metodoPago: '' },
         editandoCarrito: false,
+        mostrarModalEditarCarrito: false,
+        carritoEditando: { id: null, nombre: '', cliente: '' },
+        mostrarModalLimiteCarritos: false,
+        MAX_CARRITOS: 12,
 
         handleBarcodeInput(event) {
             const value = event.target.value;
@@ -819,10 +868,19 @@
         },
 
         crearNuevoCarrito() {
+            // Verificar límite de carritos
+            const todosLosCarritos = this.cargarCarritosDeStorage();
+            const totalCarritos = todosLosCarritos.length + (this.carritoActual.id ? 1 : 0);
+            
+            if (totalCarritos >= this.MAX_CARRITOS) {
+                this.mostrarModalLimiteCarritos = true;
+                return;
+            }
+            
             const nuevoId = Date.now().toString();
             this.carritoActual = {
                 id: nuevoId,
-                nombre: `Carrito ${this.carritosGuardados.length + 1}`,
+                nombre: `Carrito ${todosLosCarritos.length + 1}`,
                 cliente: '',
                 items: [],
                 metodoPago: ''
@@ -874,6 +932,22 @@
 
         cargarCarritosGuardados() {
             const carritos = this.cargarCarritosDeStorage();
+            
+            // Verificar si hay un carrito específico a activar (desde consultas)
+            const carritoAActivar = sessionStorage.getItem('carrito_a_activar');
+            if (carritoAActivar) {
+                const carritoEncontrado = carritos.find(c => c.id === carritoAActivar);
+                if (carritoEncontrado) {
+                    this.carritoActual = { ...carritoEncontrado };
+                    this.items = carritoEncontrado.items.map(item => ({ ...item }));
+                    this.metodoPago = carritoEncontrado.metodoPago || '';
+                    this.carritosGuardados = carritos.filter(c => c.id !== carritoEncontrado.id);
+                    sessionStorage.removeItem('carrito_a_activar');
+                    return;
+                }
+                sessionStorage.removeItem('carrito_a_activar');
+            }
+            
             // Si hay un carrito activo, separarlo
             if (this.carritoActual.id) {
                 const activoIndex = carritos.findIndex(c => c.id === this.carritoActual.id);
@@ -909,7 +983,6 @@
             
             // Actualizar lista de carritos guardados
             this.carritosGuardados = this.cargarCarritosDeStorage().filter(c => c.id !== carrito.id);
-            this.mostrarCarritos = false;
             
             // Enfocar en el campo de código de barras
             setTimeout(() => {
@@ -935,17 +1008,50 @@
         },
 
         editarCarritoActual() {
-            const nuevoNombre = prompt('Nombre del carrito:', this.carritoActual.nombre);
-            if (nuevoNombre !== null) {
-                this.carritoActual.nombre = nuevoNombre.trim() || this.carritoActual.nombre;
+            this.abrirModalEditarCarrito(this.carritoActual);
+        },
+
+        abrirModalEditarCarrito(carrito) {
+            this.carritoEditando = {
+                id: carrito.id,
+                nombre: carrito.nombre || '',
+                cliente: carrito.cliente || ''
+            };
+            this.mostrarModalEditarCarrito = true;
+        },
+
+        cerrarModalEditarCarrito() {
+            this.mostrarModalEditarCarrito = false;
+            this.carritoEditando = { id: null, nombre: '', cliente: '' };
+        },
+
+        guardarEdicionCarrito() {
+            if (!this.carritoEditando.nombre || this.carritoEditando.nombre.trim() === '') {
+                alert('El nombre del carrito es requerido');
+                return;
             }
             
-            const nuevoCliente = prompt('Nombre del cliente (opcional):', this.carritoActual.cliente || '');
-            if (nuevoCliente !== null) {
-                this.carritoActual.cliente = nuevoCliente.trim();
+            const nombre = this.carritoEditando.nombre.trim();
+            const cliente = this.carritoEditando.cliente.trim();
+            
+            // Si es el carrito actual
+            if (this.carritoEditando.id === this.carritoActual.id) {
+                this.carritoActual.nombre = nombre;
+                this.carritoActual.cliente = cliente;
+                this.guardarCarritoActual();
+            } else {
+                // Es un carrito guardado
+                const carritos = this.cargarCarritosDeStorage();
+                const index = carritos.findIndex(c => c.id === this.carritoEditando.id);
+                if (index >= 0) {
+                    carritos[index].nombre = nombre;
+                    carritos[index].cliente = cliente;
+                    localStorage.setItem('carritos_ventas', JSON.stringify(carritos));
+                    this.cargarCarritosGuardados();
+                }
             }
             
-            this.guardarCarritoActual();
+            this.cerrarModalEditarCarrito();
         },
 
         generarPDF() {
@@ -955,6 +1061,27 @@
             }
             // Abrir el PDF en una nueva ventana para descargarlo
             window.open(`/ventas/pdf/${this.ventaId}`, '_blank');
+        },
+
+        async imprimirTicket() {
+            if (!this.ventaId) {
+                alert('No se pudo obtener el ID de la venta');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/ventas/imprimir-ticket/${this.ventaId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Ticket impreso correctamente');
+                } else {
+                    alert('Error al imprimir: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al conectar con el servidor para imprimir el ticket');
+            }
         },
 
         nuevaVenta() {
@@ -977,6 +1104,16 @@
 
         calcularTotal() {
             return this.items.reduce((sum, item) => sum + item.subtotal, 0);
+        },
+
+        calcularTotalCarrito(carrito) {
+            if (!carrito || !carrito.items) return 0;
+            return carrito.items.reduce((sum, item) => {
+                const precio = item.precio_unitario || item.precio || 0;
+                const cantidad = item.cantidad || 0;
+                const subtotal = item.subtotal || (precio * cantidad);
+                return sum + subtotal;
+            }, 0);
         },
 
         async buscarPorNombre() {
@@ -1125,7 +1262,10 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ mensaje: mensaje })
+                    body: JSON.stringify({ 
+                        mensaje: mensaje,
+                        historial: this.mensajesAyuda  // Enviar historial para mantener contexto
+                    })
                 });
 
                 const data = await response.json();

@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+
+{% block title %}Recibir Pedido - Veterinaria{% endblock %}
+
+{% block content %}
+<div x-data="compraApp()" x-init="init()" x-cloak>
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-truck mr-2 text-orange-600"></i>Recibir Pedido
+                </h2>
+                <a href="{{ url_for('compras.listar') }}" 
+                   class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-list mr-2"></i>Ver Historial
+                </a>
+            </div>
+
+            <!-- Información del proveedor y total -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Información del Pedido</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Proveedor
+                            </label>
+                            <select x-model="proveedorId"
+                                    @change="cargarProveedores()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                                <option value="">Seleccionar proveedor...</option>
+                                <template x-for="proveedor in proveedores" :key="proveedor.id">
+                                    <option :value="proveedor.id" x-text="proveedor.nombre"></option>
+                                </template>
+                            </select>
+                            <button @click="abrirModalCrearProveedor()" 
+                                    class="text-sm text-orange-600 hover:text-orange-800 mt-2 inline-block">
+                                <i class="fas fa-plus mr-1"></i>Crear nuevo proveedor
+                            </button>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Notas (opcional)
+                            </label>
+                            <textarea x-model="notas"
+                                      rows="3"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                      placeholder="Notas sobre el pedido..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Resumen</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Productos:</span>
+                            <span class="font-medium" x-text="items.length"></span>
+                        </div>
+                        <div class="flex justify-between text-xl font-bold text-orange-600 pt-2 border-t border-gray-300">
+                            <span>Total:</span>
+                            <span x-text="formatMoney(total)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campo de búsqueda de productos -->
+            <div class="mb-6">
+                <label for="busqueda_producto" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-barcode mr-2"></i>Buscar Producto
+                </label>
+                <div class="flex space-x-2">
+                    <input 
+                        type="text" 
+                        id="busqueda_producto"
+                        x-model="busquedaProducto"
+                        @keyup.enter="buscarProducto()"
+                        placeholder="Escanea código de barras o busca por nombre..."
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                        autofocus
+                    >
+                    <button @click="buscarProducto()" 
+                            class="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de productos en el pedido -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Productos en el Pedido</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-if="items.length === 0">
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                        <i class="fas fa-box-open text-4xl mb-2 block"></i>
+                                        No hay productos en el pedido
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="(item, index) in items" :key="index">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900" x-text="item.nombre"></div>
+                                        <div class="text-sm text-gray-500" x-text="'Código: ' + item.codigo_barras"></div>
+                                        <div class="text-xs text-gray-400" x-text="'Stock actual: ' + item.stock"></div>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <button @click="decrementarCantidad(index)" 
+                                                    class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-l">
+                                                <i class="fas fa-minus text-xs"></i>
+                                            </button>
+                                            <input type="number" 
+                                                   x-model="item.cantidad"
+                                                   @change="actualizarSubtotal(index)"
+                                                   min="1"
+                                                   class="w-16 px-2 py-1 text-center border-t border-b border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                            <button @click="incrementarCantidad(index)" 
+                                                    class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-r">
+                                                <i class="fas fa-plus text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="flex flex-col">
+                                            <input type="number" 
+                                                   x-model="item.precio_unitario"
+                                                   @change="actualizarSubtotal(index)"
+                                                   @input="actualizarSubtotal(index)"
+                                                   min="0"
+                                                   step="0.01"
+                                                   class="w-32 px-3 py-2 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-semibold text-orange-700"
+                                                   placeholder="0.00">
+                                            <span class="text-xs text-gray-500 mt-1" 
+                                                  x-text="'Precio compra: ' + formatMoney(item.precio_compra_original || 0)"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900" 
+                                        x-text="formatMoney(item.subtotal)"></td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <button @click="eliminarItem(index)" 
+                                                class="text-red-600 hover:text-red-800">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="flex justify-end space-x-4">
+                <a href="{{ url_for('ventas.nueva_venta') }}" 
+                   class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    Cancelar
+                </a>
+                <button @click="procesarCompra()" 
+                        :disabled="items.length === 0 || procesando"
+                        :class="items.length === 0 || procesando ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'"
+                        class="px-6 py-3 text-white rounded-lg transition-colors">
+                    <i class="fas fa-check mr-2"></i>
+                    <span x-text="procesando ? 'Procesando...' : 'Recibir Pedido'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de crear proveedor -->
+    <div x-show="mostrarModalCrearProveedor" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="cerrarModalCrearProveedor()">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900">
+                    <i class="fas fa-truck mr-2 text-purple-600"></i>Crear Proveedor
+                </h3>
+                <button @click="cerrarModalCrearProveedor()" 
+                        class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="crearProveedor()">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            x-model="nuevoProveedor.nombre"
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="Nombre del proveedor"
+                            autofocus
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Teléfono
+                        </label>
+                        <input 
+                            type="text" 
+                            x-model="nuevoProveedor.telefono"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="Teléfono del proveedor"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Correo Electrónico
+                        </label>
+                        <input 
+                            type="email" 
+                            x-model="nuevoProveedor.correo_electronico"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="correo@ejemplo.com"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Notas
+                        </label>
+                        <textarea 
+                            x-model="nuevoProveedor.notas"
+                            rows="3"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="Notas adicionales sobre el proveedor"
+                        ></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button"
+                            @click="cerrarModalCrearProveedor()" 
+                            class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            :disabled="!nuevoProveedor.nombre || procesandoProveedor"
+                            :class="!nuevoProveedor.nombre || procesandoProveedor ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'"
+                            class="px-4 py-2 text-white rounded-lg transition-colors">
+                        <i class="fas fa-save mr-2"></i>
+                        <span x-text="procesandoProveedor ? 'Guardando...' : 'Guardar'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de éxito -->
+    <div x-show="mostrarExito" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarExito = false">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div class="text-center">
+                <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">¡Pedido Recibido!</h3>
+                <p class="text-gray-600 mb-4" x-text="'Número de compra: ' + numeroCompra"></p>
+                <p class="text-xl font-semibold text-orange-600 mb-6" x-text="'Total: ' + formatMoney(totalCompra)"></p>
+                <div class="flex space-x-3 justify-center">
+                    <button @click="nuevaCompra()" 
+                            class="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                        Nuevo Pedido
+                    </button>
+                    <a href="{{ url_for('compras.listar') }}" 
+                       class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Ver Historial
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function compraApp() {
+    return {
+        items: [],
+        proveedorId: '',
+        proveedores: [],
+        notas: '',
+        procesando: false,
+        mostrarExito: false,
+        numeroCompra: '',
+        totalCompra: 0,
+        busquedaProducto: '',
+        productoSeleccionado: null,
+        mostrarModalCrearProveedor: false,
+        nuevoProveedor: {
+            nombre: '',
+            telefono: '',
+            correo_electronico: '',
+            notas: ''
+        },
+        procesandoProveedor: false,
+
+        async init() {
+            await this.cargarProveedores();
+        },
+
+        async cargarProveedores() {
+            try {
+                const response = await fetch('/proveedores/api/listar');
+                const data = await response.json();
+                this.proveedores = data;
+            } catch (error) {
+                console.error('Error al cargar proveedores:', error);
+            }
+        },
+
+        async buscarProducto() {
+            const busqueda = this.busquedaProducto.trim();
+            if (!busqueda || busqueda.length < 2) {
+                return;
+            }
+
+            try {
+                // Intentar buscar por código primero
+                const responseCodigo = await fetch(`/compras/api/buscar-producto?codigo=${encodeURIComponent(busqueda)}`);
+                if (responseCodigo.ok) {
+                    const producto = await responseCodigo.json();
+                    this.agregarProducto(producto);
+                    this.busquedaProducto = '';
+                    return;
+                }
+
+                // Buscar por nombre
+                const responseNombre = await fetch(`/compras/api/buscar-producto?nombre=${encodeURIComponent(busqueda)}`);
+                if (responseNombre.ok) {
+                    const productos = await responseNombre.json();
+                    if (productos.length === 1) {
+                        this.agregarProducto(productos[0]);
+                        this.busquedaProducto = '';
+                    } else if (productos.length > 1) {
+                        // Mostrar modal para seleccionar
+                        alert('Múltiples productos encontrados. Por favor, busca más específicamente o escanea el código de barras.');
+                    }
+                }
+            } catch (error) {
+                console.error('Error al buscar producto:', error);
+                alert('Error al buscar el producto');
+            }
+        },
+
+        agregarProducto(producto) {
+            // Verificar si ya está en la lista
+            const itemExistente = this.items.find(item => item.producto_id === producto.id);
+            if (itemExistente) {
+                itemExistente.cantidad++;
+                this.actualizarSubtotal(this.items.indexOf(itemExistente));
+                this.busquedaProducto = '';
+                return;
+            }
+
+            // Agregar nuevo producto
+            const precioCompra = parseFloat(producto.precio_compra) || 0;
+            this.items.push({
+                producto_id: producto.id,
+                nombre: producto.nombre,
+                codigo_barras: producto.codigo_barras,
+                stock: producto.stock || 0,
+                cantidad: 1,
+                precio_unitario: precioCompra,
+                precio_compra_original: precioCompra, // Guardar precio original para referencia
+                subtotal: precioCompra
+            });
+        },
+
+        incrementarCantidad(index) {
+            this.items[index].cantidad++;
+            this.actualizarSubtotal(index);
+        },
+
+        decrementarCantidad(index) {
+            if (this.items[index].cantidad > 1) {
+                this.items[index].cantidad--;
+                this.actualizarSubtotal(index);
+            }
+        },
+
+        actualizarSubtotal(index) {
+            const item = this.items[index];
+            // Asegurar que precio_unitario sea un número válido
+            const precio = parseFloat(item.precio_unitario) || 0;
+            item.precio_unitario = precio;
+            item.subtotal = precio * item.cantidad;
+        },
+
+        eliminarItem(index) {
+            if (confirm('¿Eliminar este producto del pedido?')) {
+                this.items.splice(index, 1);
+            }
+        },
+
+        get total() {
+            return this.items.reduce((sum, item) => sum + item.subtotal, 0);
+        },
+
+        formatMoney(value) {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 0
+            }).format(value);
+        },
+
+        async procesarCompra() {
+            if (this.items.length === 0) {
+                alert('Agrega al menos un producto al pedido');
+                return;
+            }
+
+            this.procesando = true;
+
+            try {
+                const response = await fetch('/compras/api/procesar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        items: this.items.map(item => ({
+                            producto_id: item.producto_id,
+                            cantidad: item.cantidad,
+                            precio_unitario: item.precio_unitario
+                        })),
+                        proveedor_id: this.proveedorId || null,
+                        total: this.total,
+                        notas: this.notas
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.error || 'Error al procesar el pedido');
+                    this.procesando = false;
+                    return;
+                }
+
+                this.numeroCompra = data.numero_compra;
+                this.totalCompra = data.total;
+                this.mostrarExito = true;
+                this.procesando = false;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al procesar el pedido');
+                this.procesando = false;
+            }
+        },
+
+        nuevaCompra() {
+            this.items = [];
+            this.proveedorId = '';
+            this.notas = '';
+            this.mostrarExito = false;
+            this.numeroCompra = '';
+            this.totalCompra = 0;
+            document.getElementById('busqueda_producto')?.focus();
+        },
+
+        abrirModalCrearProveedor() {
+            this.nuevoProveedor = {
+                nombre: '',
+                telefono: '',
+                correo_electronico: '',
+                notas: ''
+            };
+            this.mostrarModalCrearProveedor = true;
+        },
+
+        cerrarModalCrearProveedor() {
+            this.mostrarModalCrearProveedor = false;
+            this.nuevoProveedor = {
+                nombre: '',
+                telefono: '',
+                correo_electronico: '',
+                notas: ''
+            };
+        },
+
+        async crearProveedor() {
+            if (!this.nuevoProveedor.nombre || this.nuevoProveedor.nombre.trim() === '') {
+                alert('El nombre del proveedor es requerido');
+                return;
+            }
+
+            this.procesandoProveedor = true;
+
+            try {
+                const response = await fetch('/proveedores/api/crear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nombre: this.nuevoProveedor.nombre.trim(),
+                        telefono: this.nuevoProveedor.telefono.trim() || null,
+                        correo_electronico: this.nuevoProveedor.correo_electronico.trim() || null,
+                        notas: this.nuevoProveedor.notas.trim() || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.error || 'Error al crear el proveedor');
+                    this.procesandoProveedor = false;
+                    return;
+                }
+
+                // Recargar la lista de proveedores
+                await this.cargarProveedores();
+                // Seleccionar el proveedor recién creado
+                this.proveedorId = data.id.toString();
+                
+                this.cerrarModalCrearProveedor();
+                this.procesandoProveedor = false;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al crear el proveedor');
+                this.procesandoProveedor = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
+

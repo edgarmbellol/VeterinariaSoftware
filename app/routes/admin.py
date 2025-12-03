@@ -1,13 +1,15 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, send_from_directory
 from flask_login import login_required, current_user
 from functools import wraps
 from app import db
-from app.models import Venta, Producto, ItemVenta, Devolucion, ItemDevolucion, Usuario
+from app.models import Venta, Producto, ItemVenta, Devolucion, ItemDevolucion, Usuario, ConfiguracionNegocio
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract
 from decimal import Decimal
 import random
 import string
+import os
+from werkzeug.utils import secure_filename
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -41,18 +43,56 @@ def estadisticas():
     query = Venta.query
     
     if fecha_inicio:
-        query = query.filter(Venta.fecha_venta >= datetime.fromisoformat(fecha_inicio))
+        fecha_inicio_dt = datetime.fromisoformat(fecha_inicio)
+        # Asegurar que incluya desde el inicio del día
+        fecha_inicio_dt = fecha_inicio_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        query = query.filter(Venta.fecha_venta >= fecha_inicio_dt)
     if fecha_fin:
-        query = query.filter(Venta.fecha_venta <= datetime.fromisoformat(fecha_fin))
+        fecha_fin_dt = datetime.fromisoformat(fecha_fin)
+        # Ajustar fecha_fin para incluir todo el día (hasta las 23:59:59.999999)
+        fecha_fin_dt = fecha_fin_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        query = query.filter(Venta.fecha_venta <= fecha_fin_dt)
     if usuario_id and usuario_id != '':
         query = query.filter(Venta.usuario_id == int(usuario_id))
     
     ventas = query.all()
     
+    # Obtener IDs de ventas para buscar devoluciones
+    venta_ids = [v.id for v in ventas]
+    
+    # Obtener devoluciones: si hay filtros de fecha, considerar devoluciones por fecha_devolucion
+    # Si no hay filtros, considerar todas las devoluciones de las ventas en el rango
+    if fecha_inicio or fecha_fin:
+        # Si hay filtros de fecha, obtener devoluciones por fecha_devolucion
+        query_devoluciones = Devolucion.query
+        if fecha_inicio:
+            query_devoluciones = query_devoluciones.filter(Devolucion.fecha_devolucion >= datetime.fromisoformat(fecha_inicio))
+        if fecha_fin:
+            # Ajustar fecha_fin para incluir todo el día
+            fecha_fin_ajustada = datetime.fromisoformat(fecha_fin)
+            fecha_fin_ajustada = fecha_fin_ajustada.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query_devoluciones = query_devoluciones.filter(Devolucion.fecha_devolucion <= fecha_fin_ajustada)
+        # Solo considerar devoluciones de ventas que están en el rango (para mantener consistencia)
+        if venta_ids:
+            query_devoluciones = query_devoluciones.filter(Devolucion.venta_id.in_(venta_ids))
+        devoluciones = query_devoluciones.all()
+    else:
+        # Sin filtros de fecha: obtener todas las devoluciones de estas ventas
+        devoluciones = Devolucion.query.filter(Devolucion.venta_id.in_(venta_ids)).all() if venta_ids else []
+    
     # Calcular estadísticas
     total_ventas = len(ventas)
     total_ingresos = sum(float(v.total) for v in ventas)
+    
+    # Restar los ingresos devueltos
+    total_devoluciones = sum(float(d.total_devolucion) for d in devoluciones)
+    total_ingresos -= total_devoluciones
+    
     total_ganancias = sum(v.calcular_ganancia_total() for v in ventas)
+    
+    # Restar las ganancias perdidas por devoluciones
+    ganancias_perdidas = sum(d.calcular_ganancia_perdida_total() for d in devoluciones)
+    total_ganancias -= ganancias_perdidas
     
     # Ventas por método de pago
     pagos = {}
@@ -67,9 +107,13 @@ def estadisticas():
     ).join(Venta)
     
     if fecha_inicio:
-        items_query = items_query.filter(Venta.fecha_venta >= datetime.fromisoformat(fecha_inicio))
+        fecha_inicio_dt = datetime.fromisoformat(fecha_inicio)
+        fecha_inicio_dt = fecha_inicio_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        items_query = items_query.filter(Venta.fecha_venta >= fecha_inicio_dt)
     if fecha_fin:
-        items_query = items_query.filter(Venta.fecha_venta <= datetime.fromisoformat(fecha_fin))
+        fecha_fin_dt = datetime.fromisoformat(fecha_fin)
+        fecha_fin_dt = fecha_fin_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        items_query = items_query.filter(Venta.fecha_venta <= fecha_fin_dt)
     
     productos_vendidos = items_query.group_by(ItemVenta.producto_id).order_by(
         func.sum(ItemVenta.cantidad).desc()
@@ -84,21 +128,40 @@ def estadisticas():
                 'cantidad': int(cantidad)
             })
     
-    # Ventas por día (últimos 7 días)
+    # Ventas por día (últimos 7 días) - descontando devoluciones
+    # Incluir desde hace 6 días hasta hoy (7 días en total)
     ultimos_7_dias = []
+    # Usar UTC para ser consistente con cómo se guardan las fechas
+    hoy_utc = datetime.utcnow()
     for i in range(6, -1, -1):
-        fecha = datetime.now() - timedelta(days=i)
-        fecha_inicio_dia = fecha.replace(hour=0, minute=0, second=0, microsecond=0)
-        fecha_fin_dia = fecha.replace(hour=23, minute=59, second=59, microsecond=999999)
+        fecha = hoy_utc - timedelta(days=i)
+        fecha_solo = fecha.date()
+        fecha_inicio_dia = datetime.combine(fecha_solo, datetime.min.time())
+        fecha_fin_dia = datetime.combine(fecha_solo, datetime.max.time())
         
+        # Usar func.date para comparar solo la fecha, sin importar la hora o zona horaria
         ventas_dia = Venta.query.filter(
-            Venta.fecha_venta >= fecha_inicio_dia,
-            Venta.fecha_venta <= fecha_fin_dia
+            func.date(Venta.fecha_venta) == fecha_solo
         ).all()
         
+        # Calcular total de ventas del día
         total_dia = sum(float(v.total) for v in ventas_dia)
+        
+        # Obtener IDs de ventas del día para buscar devoluciones
+        venta_ids_dia = [v.id for v in ventas_dia]
+        
+        # Obtener devoluciones de estas ventas que fueron hechas en este día
+        devoluciones_dia = Devolucion.query.filter(
+            Devolucion.venta_id.in_(venta_ids_dia),
+            func.date(Devolucion.fecha_devolucion) == fecha_solo
+        ).all() if venta_ids_dia else []
+        
+        # Descontar devoluciones del total del día
+        total_devoluciones_dia = sum(float(d.total_devolucion) for d in devoluciones_dia)
+        total_dia -= total_devoluciones_dia
+        
         ultimos_7_dias.append({
-            'fecha': fecha.strftime('%Y-%m-%d'),
+            'fecha': fecha_solo.strftime('%Y-%m-%d'),
             'total': total_dia
         })
     
@@ -118,9 +181,13 @@ def estadisticas():
     ).join(Venta, Usuario.id == Venta.usuario_id, isouter=True)
     
     if fecha_inicio:
-        usuarios_con_ventas = usuarios_con_ventas.filter(Venta.fecha_venta >= datetime.fromisoformat(fecha_inicio))
+        fecha_inicio_dt = datetime.fromisoformat(fecha_inicio)
+        fecha_inicio_dt = fecha_inicio_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        usuarios_con_ventas = usuarios_con_ventas.filter(Venta.fecha_venta >= fecha_inicio_dt)
     if fecha_fin:
-        usuarios_con_ventas = usuarios_con_ventas.filter(Venta.fecha_venta <= datetime.fromisoformat(fecha_fin))
+        fecha_fin_dt = datetime.fromisoformat(fecha_fin)
+        fecha_fin_dt = fecha_fin_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        usuarios_con_ventas = usuarios_con_ventas.filter(Venta.fecha_venta <= fecha_fin_dt)
     
     usuarios_con_ventas = usuarios_con_ventas.group_by(Usuario.id, Usuario.username).all()
     
@@ -129,17 +196,49 @@ def estadisticas():
             # Calcular ganancias para este usuario
             ventas_usuario = Venta.query.filter_by(usuario_id=usuario_id)
             if fecha_inicio:
-                ventas_usuario = ventas_usuario.filter(Venta.fecha_venta >= datetime.fromisoformat(fecha_inicio))
+                fecha_inicio_dt = datetime.fromisoformat(fecha_inicio)
+                fecha_inicio_dt = fecha_inicio_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+                ventas_usuario = ventas_usuario.filter(Venta.fecha_venta >= fecha_inicio_dt)
             if fecha_fin:
-                ventas_usuario = ventas_usuario.filter(Venta.fecha_venta <= datetime.fromisoformat(fecha_fin))
+                fecha_fin_dt = datetime.fromisoformat(fecha_fin)
+                fecha_fin_dt = fecha_fin_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+                ventas_usuario = ventas_usuario.filter(Venta.fecha_venta <= fecha_fin_dt)
             
-            total_ganancias_usuario = sum(v.calcular_ganancia_total() for v in ventas_usuario.all())
+            ventas_usuario_list = ventas_usuario.all()
+            venta_ids_usuario = [v.id for v in ventas_usuario_list]
+            
+            # Obtener devoluciones de las ventas de este usuario
+            # Si hay filtros de fecha, considerar devoluciones por fecha_devolucion
+            if fecha_inicio or fecha_fin:
+                query_devoluciones_usuario = Devolucion.query
+                if fecha_inicio:
+                    query_devoluciones_usuario = query_devoluciones_usuario.filter(Devolucion.fecha_devolucion >= datetime.fromisoformat(fecha_inicio))
+                if fecha_fin:
+                    fecha_fin_ajustada = datetime.fromisoformat(fecha_fin)
+                    fecha_fin_ajustada = fecha_fin_ajustada.replace(hour=23, minute=59, second=59, microsecond=999999)
+                    query_devoluciones_usuario = query_devoluciones_usuario.filter(Devolucion.fecha_devolucion <= fecha_fin_ajustada)
+                if venta_ids_usuario:
+                    query_devoluciones_usuario = query_devoluciones_usuario.filter(Devolucion.venta_id.in_(venta_ids_usuario))
+                devoluciones_usuario = query_devoluciones_usuario.all()
+            else:
+                devoluciones_usuario = Devolucion.query.filter(Devolucion.venta_id.in_(venta_ids_usuario)).all() if venta_ids_usuario else []
+            
+            total_ganancias_usuario = sum(v.calcular_ganancia_total() for v in ventas_usuario_list)
+            
+            # Restar las ganancias perdidas por devoluciones
+            ganancias_perdidas_usuario = sum(d.calcular_ganancia_perdida_total() for d in devoluciones_usuario)
+            total_ganancias_usuario -= ganancias_perdidas_usuario
+            
+            # Calcular ingresos netos (descontando devoluciones)
+            total_ingresos_usuario = float(total_ing or 0)
+            total_devoluciones_usuario = sum(float(d.total_devolucion) for d in devoluciones_usuario)
+            total_ingresos_usuario -= total_devoluciones_usuario
             
             estadisticas_empleados.append({
                 'usuario_id': usuario_id,
                 'username': username,
                 'total_ventas': int(num_ventas),
-                'total_ingresos': round(float(total_ing or 0), 2),
+                'total_ingresos': round(total_ingresos_usuario, 2),
                 'total_ganancias': round(total_ganancias_usuario, 2)
             })
     
@@ -426,4 +525,67 @@ def eliminar_usuario(id):
         flash(f'Error al desactivar el usuario: {str(e)}', 'error')
     
     return redirect(url_for('admin.listar_usuarios'))
+
+
+# ========== RUTAS DE CONFIGURACIÓN DEL NEGOCIO ==========
+
+@bp.route('/configuracion', methods=['GET', 'POST'])
+@admin_required
+def configuracion_negocio():
+    """Gestionar la configuración del negocio"""
+    config = ConfiguracionNegocio.obtener_configuracion()
+    
+    if request.method == 'POST':
+        try:
+            # Actualizar datos básicos
+            config.nombre_negocio = request.form.get('nombre_negocio', '').strip()
+            config.nit = request.form.get('nit', '').strip()
+            config.direccion = request.form.get('direccion', '').strip()
+            config.telefono = request.form.get('telefono', '').strip()
+            config.correo = request.form.get('correo', '').strip()
+            
+            # Manejar carga de logo
+            if 'logo' in request.files:
+                logo_file = request.files['logo']
+                if logo_file and logo_file.filename:
+                    # Verificar que sea PNG
+                    if not logo_file.filename.lower().endswith('.png'):
+                        flash('El logo debe ser un archivo PNG', 'error')
+                        return render_template('admin/configuracion.html', config=config)
+                    
+                    # Crear directorio si no existe
+                    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads', 'logos')
+                    os.makedirs(upload_dir, exist_ok=True)
+                    
+                    # Eliminar logo anterior si existe
+                    if config.logo_path and os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', config.logo_path)):
+                        try:
+                            old_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', config.logo_path)
+                            if os.path.exists(old_path):
+                                os.remove(old_path)
+                        except:
+                            pass
+                    
+                    # Guardar nuevo logo
+                    filename = secure_filename(f'logo_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
+                    filepath = os.path.join(upload_dir, filename)
+                    logo_file.save(filepath)
+                    config.logo_path = f'uploads/logos/{filename}'
+            
+            db.session.commit()
+            flash('Configuración actualizada exitosamente', 'success')
+            return redirect(url_for('admin.configuracion_negocio'))
+        
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la configuración: {str(e)}', 'error')
+    
+    return render_template('admin/configuracion.html', config=config)
+
+
+@bp.route('/uploads/logos/<filename>')
+@login_required
+def servir_logo(filename):
+    """Servir archivos de logo"""
+    return send_from_directory(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads', 'logos'), filename)
 

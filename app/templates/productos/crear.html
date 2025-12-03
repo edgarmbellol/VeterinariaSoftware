@@ -3,219 +3,27 @@
 {% block title %}Crear Producto - Veterinaria{% endblock %}
 
 {% block content %}
-<div x-data="productoApp()" x-cloak>
-<div class="bg-white shadow rounded-lg max-w-3xl mx-auto">
-    <div class="px-4 py-5 sm:p-6">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">
-            <i class="fas fa-plus-circle mr-2 text-blue-600"></i>Crear Nuevo Producto
-        </h2>
-
-        <form method="POST" action="{{ url_for('productos.crear') }}">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="md:col-span-2">
-                    <label for="codigo_barras" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-barcode mr-2"></i>Código de Barras *
-                    </label>
-                    <input type="text" 
-                           id="codigo_barras" 
-                           name="codigo_barras" 
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Ej: 1234567890123">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label for="nombre" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-tag mr-2"></i>Nombre del Producto *
-                    </label>
-                    <input type="text" 
-                           id="nombre" 
-                           name="nombre" 
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="Ej: Alimento para perros Premium">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-align-left mr-2"></i>Descripción
-                    </label>
-                    <textarea id="descripcion" 
-                              name="descripcion" 
-                              rows="3"
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Descripción del producto"></textarea>
-                </div>
-
-                <div>
-                    <label for="categoria_id" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-folder mr-2"></i>Categoría
-                    </label>
-                    <div class="flex items-center space-x-2">
-                        <select id="categoria_id" 
-                                name="categoria_id"
-                                x-model="categoriaSeleccionada"
-                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Sin categoría</option>
-                            <template x-for="cat in categoriasDisponibles" :key="cat.id">
-                                <option :value="cat.id" x-text="cat.nombre"></option>
-                            </template>
-                        </select>
-                        <button type="button"
-                                @click="mostrarModalCategoria = true"
-                                class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                title="Crear nueva categoría">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    <template x-if="categoriasDisponibles.length === 0">
-                        <p class="mt-1 text-sm text-gray-500">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            No hay categorías. Haz clic en el botón + para crear una.
-                        </p>
-                    </template>
-                </div>
-
-                <div>
-                    <label for="precio_compra" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-dollar-sign mr-2"></i>Precio de Compra *
-                    </label>
-                    <input type="number" 
-                           id="precio_compra" 
-                           name="precio_compra" 
-                           step="0.01"
-                           min="0"
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="0.00">
-                </div>
-
-                <div>
-                    <label for="precio_venta" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-tag mr-2"></i>Precio de Venta *
-                    </label>
-                    <input type="number" 
-                           id="precio_venta" 
-                           name="precio_venta" 
-                           step="0.01"
-                           min="0"
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="0.00">
-                </div>
-
-                <div>
-                    <label for="stock" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-warehouse mr-2"></i>Stock Inicial *
-                    </label>
-                    <input type="number" 
-                           id="stock" 
-                           name="stock" 
-                           min="0"
-                           required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="0"
-                           value="0">
-                </div>
-
-                <div>
-                    <label for="stock_minimo" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>Stock Mínimo
-                    </label>
-                    <input type="number" 
-                           id="stock_minimo" 
-                           name="stock_minimo" 
-                           min="0"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="0"
-                           value="0">
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end space-x-4">
-                <a href="{{ url_for('productos.listar') }}" 
-                   class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
-                    <i class="fas fa-times mr-2"></i>Cancelar
-                </a>
-                <button type="submit" 
-                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <i class="fas fa-save mr-2"></i>Guardar Producto
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-    <!-- Modal para crear categoría -->
-    <div x-show="mostrarModalCategoria" 
-         x-transition
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-         @click.away="mostrarModalCategoria = false">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-900">
-                    <i class="fas fa-plus-circle mr-2 text-green-600"></i>Crear Nueva Categoría
-                </h3>
-                <button @click="mostrarModalCategoria = false" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-            
-            <form @submit.prevent="crearCategoria()">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-tag mr-2"></i>Nombre de la Categoría *
-                        </label>
-                        <input type="text" 
-                               x-model="nuevaCategoria.nombre"
-                               required
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                               placeholder="Ej: Desparasitantes, Alimentos">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-align-left mr-2"></i>Descripción
-                        </label>
-                        <textarea x-model="nuevaCategoria.descripcion"
-                                  rows="3"
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                  placeholder="Descripción opcional"></textarea>
-                    </div>
-                </div>
-                
-                <div class="mt-6 flex justify-end space-x-4">
-                    <button type="button"
-                            @click="mostrarModalCategoria = false"
-                            class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            :disabled="procesandoCategoria"
-                            :class="procesandoCategoria ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
-                            class="px-6 py-2 text-white rounded-lg transition-colors">
-                        <i class="fas fa-save mr-2"></i>
-                        <span x-text="procesandoCategoria ? 'Creando...' : 'Crear Categoría'"></span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function productoApp() {
-    return {
-        categoriasDisponibles: {{ categorias | tojson | safe }},
-        categoriaSeleccionada: '',
-        mostrarModalCategoria: false,
-        nuevaCategoria: {
-            nombre: '',
-            descripcion: ''
-        },
-        procesandoCategoria: false,
-        errorCategoria: '',
+<script type="text/javascript">
+// Script actualizado - v4.0
+(function() {
+    console.log('Script de crear producto cargado v4.0');
+    
+    // Datos del servidor
+    var categoriasData = {{ categorias | tojson | safe }};
+    
+    console.log('Categorías cargadas:', categoriasData);
+    
+    window.productoCrearData = function() {
+        console.log('productoCrearData llamado v4.0');
+        return {
+            categoriasDisponibles: categoriasData,
+            categoriaSeleccionada: '',
+            mostrarModalCategoria: false,
+            nuevaCategoria: {
+                nombre: '',
+                descripcion: ''
+            },
+            procesandoCategoria: false,
 
         async cargarCategorias() {
             try {
@@ -234,7 +42,6 @@ function productoApp() {
             }
 
             this.procesandoCategoria = true;
-            this.errorCategoria = '';
 
             try {
                 const response = await fetch('/categorias/api/crear', {
@@ -254,28 +61,282 @@ function productoApp() {
                     throw new Error(data.error || 'Error al crear categoría');
                 }
 
-                // Agregar la nueva categoría a la lista
                 this.categoriasDisponibles.push(data.categoria);
-                // Ordenar por nombre
                 this.categoriasDisponibles.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                
-                // Seleccionar la nueva categoría
                 this.categoriaSeleccionada = data.categoria.id.toString();
-                
-                // Limpiar formulario y cerrar modal
                 this.nuevaCategoria = { nombre: '', descripcion: '' };
                 this.mostrarModalCategoria = false;
                 
-                alert('Categoría creada exitosamente');
+                alert('✓ Categoría creada exitosamente');
             } catch (error) {
                 console.error('Error:', error);
-                alert(error.message || 'Error al crear la categoría');
+                alert('Error: ' + (error.message || 'Error al crear la categoría'));
             } finally {
                 this.procesandoCategoria = false;
             }
         }
-    }
-}
+    };
+})();
 </script>
-{% endblock %}
 
+<div x-data="productoCrearData()" x-cloak>
+    <!-- Encabezado -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg shadow-lg mb-6 p-6">
+        <div class="flex items-center">
+            <i class="fas fa-plus-circle text-4xl mr-4"></i>
+            <div>
+                <h2 class="text-3xl font-bold">Crear Nuevo Producto</h2>
+                <p class="text-blue-100 mt-1">Completa la información del producto</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-lg rounded-lg max-w-4xl mx-auto">
+        <form method="POST" action="{{ url_for('productos.crear') }}" class="p-6">
+            <!-- Información Básica -->
+            <div class="mb-8">
+                <div class="flex items-center mb-4 pb-3 border-b-2 border-blue-200">
+                    <div class="bg-blue-100 rounded-full p-3 mr-3">
+                        <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Información Básica</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Código de Barras -->
+                    <div class="md:col-span-2">
+                        <label for="codigo_barras" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-barcode mr-2 text-blue-600"></i>Código de Barras *
+                        </label>
+                        <input type="text" 
+                               id="codigo_barras" 
+                               name="codigo_barras" 
+                               required
+                               class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="Ej: 1234567890123">
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Escanea o escribe el código de barras del producto
+                        </p>
+                    </div>
+
+                    <!-- Nombre del Producto -->
+                    <div class="md:col-span-2">
+                        <label for="nombre" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-tag mr-2 text-blue-600"></i>Nombre del Producto *
+                        </label>
+                        <input type="text" 
+                               id="nombre" 
+                               name="nombre" 
+                               required
+                               class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                               placeholder="Ej: Alimento para perros Premium 15kg">
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Nombre completo y descriptivo del producto
+                        </p>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="md:col-span-2">
+                        <label for="descripcion" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-align-left mr-2 text-blue-600"></i>Descripción
+                        </label>
+                        <textarea id="descripcion" 
+                                  name="descripcion" 
+                                  rows="4"
+                                  class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                  placeholder="Describe el producto, sus características, uso, etc."></textarea>
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Información adicional sobre el producto (opcional)
+                        </p>
+                    </div>
+
+                    <!-- Categoría -->
+                    <div class="md:col-span-2">
+                        <label for="categoria_id" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-folder mr-2 text-blue-600"></i>Categoría
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <select id="categoria_id" 
+                                    name="categoria_id"
+                                    x-model="categoriaSeleccionada"
+                                    class="flex-1 px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Sin categoría</option>
+                                <template x-for="cat in categoriasDisponibles" :key="cat.id">
+                                    <option :value="cat.id" x-text="cat.nombre"></option>
+                                </template>
+                            </select>
+                            <button type="button"
+                                    @click="mostrarModalCategoria = true"
+                                    class="px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg shadow-lg"
+                                    title="Crear nueva categoría">
+                                <i class="fas fa-plus mr-2"></i>Nueva
+                            </button>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Organiza tus productos por categorías
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Precios y Stock -->
+            <div class="mb-8">
+                <div class="flex items-center mb-4 pb-3 border-b-2 border-green-200">
+                    <div class="bg-green-100 rounded-full p-3 mr-3">
+                        <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Precios y Stock</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Precio de Compra -->
+                    <div>
+                        <label for="precio_compra" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-shopping-cart mr-2 text-green-600"></i>Precio de Compra *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-xl font-bold">$</span>
+                            <input type="number" 
+                                   id="precio_compra" 
+                                   name="precio_compra" 
+                                   step="0.01"
+                                   min="0"
+                                   required
+                                   class="w-full pl-10 pr-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500 transition-all"
+                                   placeholder="0.00">
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Precio al que compras el producto
+                        </p>
+                    </div>
+
+                    <!-- Precio de Venta -->
+                    <div>
+                        <label for="precio_venta" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-tag mr-2 text-green-600"></i>Precio de Venta *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-xl font-bold">$</span>
+                            <input type="number" 
+                                   id="precio_venta" 
+                                   name="precio_venta" 
+                                   step="0.01"
+                                   min="0"
+                                   required
+                                   class="w-full pl-10 pr-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500 transition-all"
+                                   placeholder="0.00">
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Precio al que vendes el producto
+                        </p>
+                    </div>
+
+                    <!-- Stock Inicial -->
+                    <div>
+                        <label for="stock" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-warehouse mr-2 text-green-600"></i>Stock Inicial *
+                        </label>
+                        <input type="number" 
+                               id="stock" 
+                               name="stock" 
+                               min="0"
+                               required
+                               class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500 transition-all"
+                               placeholder="0"
+                               value="0">
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Cantidad de productos disponibles
+                        </p>
+                    </div>
+
+                    <!-- Stock Mínimo -->
+                    <div>
+                        <label for="stock_minimo" class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-exclamation-triangle mr-2 text-yellow-600"></i>Stock Mínimo
+                        </label>
+                        <input type="number" 
+                               id="stock_minimo" 
+                               name="stock_minimo" 
+                               min="0"
+                               class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-yellow-500 focus:border-yellow-500 transition-all"
+                               placeholder="0"
+                               value="0">
+                        <p class="mt-2 text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>Se te avisará cuando el stock llegue a este nivel
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="flex justify-end gap-4 pt-6 border-t-2 border-gray-200">
+                <a href="{{ url_for('productos.listar') }}" 
+                   class="px-8 py-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-bold text-lg">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </a>
+                <button type="submit" 
+                        class="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg">
+                    <i class="fas fa-save mr-2"></i>Guardar Producto
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal para crear categoría -->
+    <div x-show="mostrarModalCategoria" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.away="mostrarModalCategoria = false">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">
+                    <i class="fas fa-plus-circle mr-2 text-green-600"></i>Nueva Categoría
+                </h3>
+                <button @click="mostrarModalCategoria = false" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="crearCategoria()">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-tag mr-2"></i>Nombre de la Categoría *
+                        </label>
+                        <input type="text" 
+                               x-model="nuevaCategoria.nombre"
+                               required
+                               class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500"
+                               placeholder="Ej: Desparasitantes, Alimentos">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-lg font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-align-left mr-2"></i>Descripción
+                        </label>
+                        <textarea x-model="nuevaCategoria.descripcion"
+                                  rows="3"
+                                  class="w-full px-5 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-green-500 focus:border-green-500"
+                                  placeholder="Descripción opcional"></textarea>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button"
+                            @click="mostrarModalCategoria = false"
+                            class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            :disabled="procesandoCategoria"
+                            :class="procesandoCategoria ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+                            class="px-6 py-3 text-white rounded-lg transition-colors font-semibold">
+                        <i class="fas fa-save mr-2"></i>
+                        <span x-text="procesandoCategoria ? 'Creando...' : 'Crear'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

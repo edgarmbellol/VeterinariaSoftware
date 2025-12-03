@@ -37,13 +37,26 @@ def create_app(config_name='development'):
         return Usuario.query.get(int(user_id))
     
     # Registrar blueprints
-    from app.routes import productos, ventas, admin, categorias, auth, consultas
+    from app.routes import productos, ventas, admin, categorias, auth, consultas, compras, proveedores, asistente_ia
     app.register_blueprint(auth.bp)
     app.register_blueprint(productos.bp)
     app.register_blueprint(ventas.bp)
     app.register_blueprint(admin.bp)
     app.register_blueprint(categorias.bp)
     app.register_blueprint(consultas.bp)
+    app.register_blueprint(compras.bp)
+    app.register_blueprint(proveedores.bp)
+    app.register_blueprint(asistente_ia.bp)
+    
+    # Contexto global para templates
+    @app.context_processor
+    def inject_configuracion():
+        from app.models import ConfiguracionNegocio
+        try:
+            config = ConfiguracionNegocio.obtener_configuracion()
+            return {'configuracion_negocio': config}
+        except:
+            return {'configuracion_negocio': None}
     
     # Ruta principal
     @app.route('/')

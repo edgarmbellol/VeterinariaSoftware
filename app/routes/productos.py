@@ -3,6 +3,7 @@ from flask_login import login_required
 from app import db
 from app.models import Producto, Categoria
 from decimal import Decimal
+from sqlalchemy import func
 
 bp = Blueprint('productos', __name__, url_prefix='/productos')
 
@@ -17,14 +18,29 @@ def listar():
 @bp.route('/crear', methods=['GET', 'POST'])
 @login_required
 def crear():
-    categorias = Categoria.query.filter_by(activa=True).order_by(Categoria.nombre).all()
-    categorias_dict = [c.to_dict() for c in categorias]
-    
     if request.method == 'POST':
         try:
+            codigo_barras = request.form.get('codigo_barras')
+            
+            # Verificar si ya existe un producto con ese código de barras
+            producto_existente = Producto.query.filter_by(codigo_barras=codigo_barras).first()
+            
+            if producto_existente:
+                if not producto_existente.activo:
+                    # Si el producto existe pero está inactivo, redirigir a editar
+                    flash(f'Ya existe un producto inactivo con el código "{codigo_barras}". Puedes modificarlo y reactivarlo.', 'info')
+                    return redirect(url_for('productos.editar', id=producto_existente.id))
+                else:
+                    # Si el producto existe y está activo, mostrar error
+                    flash(f'Ya existe un producto activo con el código de barras "{codigo_barras}".', 'error')
+                    categorias_list = Categoria.query.filter_by(activa=True).order_by(Categoria.nombre).all()
+                    categorias = [c.to_dict() for c in categorias_list]
+                    return render_template('productos/crear.html', categorias=categorias)
+            
+            # Si no existe, crear el producto nuevo
             categoria_id = request.form.get('categoria_id')
             producto = Producto(
-                codigo_barras=request.form.get('codigo_barras'),
+                codigo_barras=codigo_barras,
                 nombre=request.form.get('nombre'),
                 descripcion=request.form.get('descripcion', ''),
                 precio_venta=Decimal(request.form.get('precio_venta')),
@@ -41,18 +57,23 @@ def crear():
             db.session.rollback()
             flash(f'Error al crear producto: {str(e)}', 'error')
     
-    return render_template('productos/crear.html', categorias=categorias_dict)
+    # Cargar categorías para el formulario
+    categorias_list = Categoria.query.filter_by(activa=True).order_by(Categoria.nombre).all()
+    categorias = [c.to_dict() for c in categorias_list]
+    
+    return render_template('productos/crear.html', categorias=categorias)
 
 
 @bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
     producto = Producto.query.get_or_404(id)
-    categorias = Categoria.query.filter_by(activa=True).order_by(Categoria.nombre).all()
-    categorias_dict = [c.to_dict() for c in categorias]
     
     if request.method == 'POST':
         try:
+            # Guardar el estado anterior para el mensaje
+            estaba_inactivo = not producto.activo
+            
             categoria_id = request.form.get('categoria_id')
             producto.codigo_barras = request.form.get('codigo_barras')
             producto.nombre = request.form.get('nombre')
@@ -63,14 +84,27 @@ def editar(id):
             producto.stock_minimo = int(request.form.get('stock_minimo', 0))
             producto.categoria_id = int(categoria_id) if categoria_id and categoria_id != '' else None
             
+            # Si el producto estaba inactivo, reactivarlo automáticamente
+            if estaba_inactivo:
+                producto.activo = True
+            
             db.session.commit()
-            flash('Producto actualizado exitosamente', 'success')
+            
+            if estaba_inactivo:
+                flash('Producto reactivado y actualizado exitosamente', 'success')
+            else:
+                flash('Producto actualizado exitosamente', 'success')
+            
             return redirect(url_for('productos.listar'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error al actualizar producto: {str(e)}', 'error')
     
-    return render_template('productos/editar.html', producto=producto, categorias=categorias_dict)
+    # Cargar categorías para el formulario
+    categorias_list = Categoria.query.filter_by(activa=True).order_by(Categoria.nombre).all()
+    categorias = [c.to_dict() for c in categorias_list]
+    
+    return render_template('productos/editar.html', producto=producto, categorias=categorias)
 
 
 @bp.route('/eliminar/<int:id>', methods=['POST'])
@@ -107,4 +141,30 @@ def buscar_api():
 def listar_api():
     productos = Producto.query.filter_by(activo=True).all()
     return jsonify([p.to_dict() for p in productos])
+
+
+@bp.route('/api/buscar-nombre', methods=['GET'])
+@login_required
+def buscar_nombre():
+    """Buscar productos por nombre, incluyendo los que no tienen stock (para recibir pedidos)"""
+    nombre = request.args.get('nombre', '').strip()
+    if not nombre or len(nombre) < 2:
+        return jsonify([])
+    
+    # Búsqueda por nombre (case insensitive, parcial) - incluye productos sin stock
+    productos = Producto.query.filter(
+        func.lower(Producto.nombre).like(f'%{nombre.lower()}%'),
+        Producto.activo == True
+    ).limit(20).all()
+    
+    return jsonify([p.to_dict() for p in productos])
+
+
+@bp.route('/api/recibir-pedido', methods=['POST'])
+@login_required
+def recibir_pedido():
+    """Endpoint legacy - redirige a la nueva funcionalidad de compras"""
+    return jsonify({
+        'error': 'Esta funcionalidad ha sido movida a la sección de Compras. Por favor usa el botón "Recibir Pedido" en la página de ventas.'
+    }), 400
 

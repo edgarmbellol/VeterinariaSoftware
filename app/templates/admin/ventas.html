@@ -102,12 +102,19 @@
                                     </template>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-center">
+                                    <div class="flex items-center justify-center gap-2">
                                     <a :href="'/ventas/pdf/' + venta.id" 
                                        target="_blank"
                                        class="text-red-600 hover:text-red-900"
                                        title="Generar PDF">
                                         <i class="fas fa-file-pdf text-xl"></i>
                                     </a>
+                                        <button @click="imprimirTicket(venta.id)"
+                                                class="text-green-600 hover:text-green-900"
+                                                title="Imprimir Ticket">
+                                            <i class="fas fa-receipt text-xl"></i>
+                                        </button>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3 text-sm">
                                     <a :href="'/ventas/pdf/' + venta.id" 
@@ -507,6 +514,22 @@ function ventasApp() {
             this.mostrarDevolucion = false;
             this.ventaDevolucion = null;
             this.motivoDevolucion = '';
+        },
+
+        async imprimirTicket(ventaId) {
+            try {
+                const response = await fetch(`/ventas/imprimir-ticket/${ventaId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Ticket impreso correctamente');
+                } else {
+                    alert('Error al imprimir: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al conectar con el servidor para imprimir el ticket');
+            }
         }
     }
 }

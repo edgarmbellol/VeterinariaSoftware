@@ -12,63 +12,137 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    <nav class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex">
-                    <div class="flex-shrink-0 flex items-center">
-                        <i class="fas fa-paw text-2xl mr-2"></i>
-                        <span class="text-xl font-bold">Veterinaria</span>
+    <nav class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg" x-data="{ menuAbierto: false }">
+        <div class="w-full px-2 sm:px-4 lg:px-6">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center flex-1 min-w-0">
+                    <div class="flex-shrink-0 flex items-center mr-2 sm:mr-4">
+                        {% if configuracion_negocio and configuracion_negocio.logo_path %}
+                        <img src="{{ url_for('static', filename=configuracion_negocio.logo_path) }}" 
+                             alt="{{ configuracion_negocio.nombre_negocio or 'Veterinaria' }}" 
+                             class="h-8 sm:h-10 mr-2 object-contain"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="hidden items-center">
+                            <i class="fas fa-paw text-xl sm:text-2xl mr-1 sm:mr-2"></i>
+                            <span class="text-lg sm:text-xl font-bold">{{ configuracion_negocio.nombre_negocio or 'Veterinaria' }}</span>
+                        </div>
+                        {% else %}
+                        <i class="fas fa-paw text-xl sm:text-2xl mr-1 sm:mr-2"></i>
+                        <span class="text-lg sm:text-xl font-bold">{{ configuracion_negocio.nombre_negocio if configuracion_negocio else 'Veterinaria' }}</span>
+                        {% endif %}
                     </div>
-                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                    <!-- Menú desktop - visible desde lg -->
+                    <div class="hidden lg:flex lg:space-x-2 xl:space-x-3 lg:flex-1 lg:overflow-hidden">
                         <a href="{{ url_for('ventas.nueva_venta') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-white text-sm font-medium transition-colors">
-                            <i class="fas fa-shopping-cart mr-2"></i> Ventas
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-shopping-cart mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Ventas</span>
                         </a>
                         <a href="{{ url_for('productos.listar') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-white text-sm font-medium transition-colors">
-                            <i class="fas fa-box mr-2"></i> Productos
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-box mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Productos</span>
                         </a>
                         <a href="{{ url_for('categorias.listar') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-white text-sm font-medium transition-colors">
-                            <i class="fas fa-folder mr-2"></i> Categorías
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-folder mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Categorías</span>
                         </a>
                         <a href="{{ url_for('consultas.listar') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-white text-sm font-medium transition-colors">
-                            <i class="fas fa-stethoscope mr-2"></i> Consultas
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-stethoscope mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Consultas</span>
+                        </a>
+                        <a href="{{ url_for('proveedores.listar') }}" 
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-truck mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Proveedores</span>
+                        </a>
+                        <a href="{{ url_for('compras.listar') }}" 
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-shopping-bag mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Compras</span>
+                        </a>
+                        <a href="{{ url_for('asistente_ia.index') }}" 
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-robot mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Asistente IA</span>
                         </a>
                         <a href="{{ url_for('admin.dashboard') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-white text-sm font-medium transition-colors">
-                            <i class="fas fa-chart-line mr-2"></i> Administración
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-chart-line mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Admin</span>
                         </a>
                         {% if current_user.is_authenticated and current_user.es_admin %}
                         <a href="{{ url_for('admin.listar_usuarios') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-white text-sm font-medium transition-colors">
-                            <i class="fas fa-users mr-2"></i> Usuarios
+                           class="inline-flex items-center px-2 xl:px-3 py-2 border-b-2 border-transparent hover:border-white text-xs xl:text-sm font-medium transition-colors whitespace-nowrap">
+                            <i class="fas fa-users mr-1 xl:mr-2"></i> <span class="hidden xl:inline">Usuarios</span>
                         </a>
                         {% endif %}
                     </div>
+                    <!-- Botón menú móvil/tablet -->
+                    <button @click="menuAbierto = !menuAbierto" 
+                            class="lg:hidden ml-2 px-2 py-2 text-white hover:bg-blue-700 rounded-md transition-colors">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
                     {% if current_user.is_authenticated %}
-                    <div class="flex items-center space-x-3">
-                        <div class="text-right hidden sm:block">
-                            <div class="text-sm font-medium text-blue-100">
-                                <i class="fas fa-user-circle mr-1"></i>{{ current_user.username }}
+                    <div class="flex items-center space-x-2 sm:space-x-3">
+                        <div class="text-right hidden md:block">
+                            <div class="text-xs sm:text-sm font-medium text-blue-100">
+                                <i class="fas fa-user-circle mr-1"></i><span class="hidden sm:inline">{{ current_user.username }}</span>
                             </div>
                             {% if current_user.es_admin %}
-                            <div class="text-xs text-blue-200">Administrador</div>
+                            <div class="text-xs text-blue-200 hidden sm:block">Administrador</div>
                             {% endif %}
                         </div>
                         <a href="{{ url_for('auth.logout') }}" 
-                           class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
-                            <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+                           class="inline-flex items-center px-2 sm:px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors whitespace-nowrap">
+                            <i class="fas fa-sign-out-alt mr-1 sm:mr-2"></i><span class="hidden sm:inline">Cerrar</span>
                         </a>
                     </div>
                     {% else %}
                     <a href="{{ url_for('auth.login') }}" 
-                       class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                        <i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión
+                       class="inline-flex items-center px-2 sm:px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors whitespace-nowrap">
+                        <i class="fas fa-sign-in-alt mr-1 sm:mr-2"></i><span class="hidden sm:inline">Iniciar</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Menú móvil/tablet desplegable -->
+            <div x-show="menuAbierto" 
+                 x-transition
+                 class="lg:hidden border-t border-blue-500">
+                <div class="px-2 pt-2 pb-3 space-y-1">
+                    <a href="{{ url_for('ventas.nueva_venta') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-shopping-cart mr-2"></i> Ventas
+                    </a>
+                    <a href="{{ url_for('productos.listar') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-box mr-2"></i> Productos
+                    </a>
+                    <a href="{{ url_for('categorias.listar') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-folder mr-2"></i> Categorías
+                    </a>
+                    <a href="{{ url_for('consultas.listar') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-stethoscope mr-2"></i> Consultas
+                    </a>
+                    <a href="{{ url_for('proveedores.listar') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-truck mr-2"></i> Proveedores
+                    </a>
+                    <a href="{{ url_for('compras.listar') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-shopping-bag mr-2"></i> Compras
+                    </a>
+                    <a href="{{ url_for('asistente_ia.index') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-robot mr-2"></i> Asistente IA
+                    </a>
+                    <a href="{{ url_for('admin.dashboard') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-chart-line mr-2"></i> Administración
+                    </a>
+                    {% if current_user.is_authenticated and current_user.es_admin %}
+                    <a href="{{ url_for('admin.listar_usuarios') }}" 
+                       class="block px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-users mr-2"></i> Usuarios
                     </a>
                     {% endif %}
                 </div>
